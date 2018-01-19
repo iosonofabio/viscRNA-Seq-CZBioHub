@@ -13,9 +13,9 @@ jobs:
     - stage: prepare
       script: ./.prepare_travis
     - stage: build
-      script: bash ./builder/build_image
+      script: ./builder/build_image
     - stage: test
-      script: bash ./runner/test_image
+      script: ./runner/test_image
       deploy:
         provider: releases
         api_key:
