@@ -5,10 +5,10 @@ IFS=$'\n\t'
 echo "MOCK PACKER BUILD"
 packer version
 
-./.prepare_travis
-
-pip --version
-conda --version
+#./.prepare_travis
+#
+#pip --version
+#conda --version
 
 # Validate packer config
 packer validate "amazon-ebs" -var-file=builder/vars.json builder/viscrna-seq.json
