@@ -11,11 +11,11 @@ language: python
 jobs:
   include:
     - stage: prepare
-      script: ./.prepare_travis
+      script: bash ./.prepare_travis
     - stage: build
-      script: ./builder/build_image
+      script: bash ./builder/build_image
     - stage: test
-      script: ./runner/test_image
+      script: bash ./runner/test_image
       deploy:
         provider: releases
         api_key:
