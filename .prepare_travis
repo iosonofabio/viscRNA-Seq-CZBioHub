@@ -1,0 +1,18 @@
+#!/bin/sh
+set -euo pipefail
+IFS=$'\n\t'
+
+echo "Prepare TRAVIS CI environment"
+curl "https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh" -o "miniconda.sh"
+bash "miniconda.sh" -b -p $HOME/miniconda
+
+echo "$PATH"
+export PATH="$HOME/miniconda/bin:$PATH"
+source $HOME/miniconda/bin/activate
+
+# Use pip from conda
+conda install -y pip
+
+# Install AWS cli
+conda install -y -c conda-forge awscli
+echo "DONE"
