@@ -4,4 +4,7 @@ IFS=$'\n\t'
 
 echo "MOCK PACKER BUILD"
 packer version
+
+pip --version
+conda --version
 echo "DONE"
