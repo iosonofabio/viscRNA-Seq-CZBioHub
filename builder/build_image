@@ -11,7 +11,7 @@ packer version
 #conda --version
 
 # Validate packer config
-packer validate "amazon-ebs" -var-file=builder/vars.json builder/viscrna-seq.json
+packer validate -var-file=builder/vars.json builder/viscrna-seq.json
 
 # Build AMI
 #PACKER_LOG=true packer -machine-readable build $BUILDER builder/viscrna-seq.json | tee packer.log
