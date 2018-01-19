@@ -11,7 +11,7 @@ language: python
 jobs:
   include:
     - stage: prepare
-      script: .prepare_travis
+      script: ./.prepare_travis
     - stage: build
       script: ./builder/build_image
     - stage: test
