@@ -10,11 +10,9 @@ language: generic
 
 jobs:
   include:
-    - stage: prepare
-      script: ./.prepare_travis
-    - stage: build
+    - stage: build_image
       script: ./builder/build_image
-    - stage: test
+    - stage: test_image
       script: ./runner/test_image
       deploy:
         provider: releases
