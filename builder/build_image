@@ -1,0 +1,7 @@
+#!/bin/sh
+set -euo pipefail
+IFS=$'\n\t'
+
+echo "MOCK PACKER BUILD"
+packer version
+echo "DONE"
