@@ -1,0 +1,57 @@
+#!/usr/bin/env python
+'''
+viscRNA-Seq Pipeline runner.
+
+This is an absract script (!), so it cannot run per se because the pipeline
+comes in different flavours, e.g. for different viruses. In order to create a
+concrete instance of this script, the VISCRNASEQ_GIT_BRANCH global variable
+must be set to non-empty. The reason I don't even allow environment variables
+or the likes is data consistency: only scripts deployed from CI in a specific
+branch will and should be usable. No big data crunching without testing.
+'''
+import os
+import sys
+import json
+import time
+import argparse
+import subprocess as sp
+
+
+VISCRNASEQ_GIT_BRANCH=''
+
+
+class Runner:
+    def get_ami_records(self):
+        sp.run(['aws', 's3', 'cp',
+                's3://viscrna-seq/development/CI/log_AMIs.json',
+                'log_AMIs.json'],
+               check=True)
+        try:
+            with open('log_AMIs.json', 'rt') as f:
+                ami_records = json.load(f)['AMIs'][-1]
+        finally:
+            os.remove('log_AMIs.json')
+        return ami_records
+
+
+if __name__ == '__main__':
+
+    # FIXME: more specific help for the locations
+    pa = argparse.ArgumentParser(description='''viscRNA-Seq pipeline''')
+    spas = pa.add_subparsers()
+    par = spas.add_parser('run')
+    par.add_argument(
+            '--input-bucket', required=True,
+            help='The location of the raw reads')
+    par.add_argument(
+            '--output-bucket', required=True,
+            help='The location of the output S3 bucket')
+    par.add_argument(
+            '--output-gdrive', required=False, default=None,
+            help='The location on GoogleDrive where to store the count table')
+
+    pas = spas.add_parser('stop')
+    pas.add_argument('ami-id')
+
+    pa.parse_args()
+

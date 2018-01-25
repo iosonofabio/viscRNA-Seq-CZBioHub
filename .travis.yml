@@ -11,14 +11,14 @@ language: generic
 jobs:
   include:
     - stage: build_image
-      script: ./builder/build_image
+      script: ./build/build_image
     - stage: test_image
-      script: ./runner/test_image
+      script: ./test/test_image
       deploy:
         provider: releases
         api_key:
           secure: "i3svV3n/TBU6An3Iv0q1eH9LbuRKHA6WOSL8PLi4bYSYQ/rxLw49I2XoJszJ4iYeTh4dbeohcDU9QgcVDymUuZh/NqbwT8cySTbUJ8dLvn9SAt8InLhNqJzY404qjV+n27a2lo8/83nO77AnMzi/nwKOYEml2qdFnjkTO/OGu/znVn5kd+/XI7NESJuPry22t/dWIHbmZ4PbMnHjkOQovL1IWT83oKWr4x/FPH4MIR0pb/zlem/r38fN8SmGgkGbHndQ+0eiHH7dtvjxAHqERFXqrEd3N6/6CPhPi2OCPBdUn8dsoSkhf8/Hvk5FndLrjJTwwwsfzlrVaVcnHImzsGIHw9GoGcKEbEEkrzcbPUTa3/mQwSCD8XIN+GZ0zBrbwi6jhkvApbI56jTch+JfRNh1i1JP4Tb/S260B+KlhfjqDFdVOxx4Q9takIriK+lR+scr7YpzL+yO8eBbWOIp8tekqS2dOPwwG55fYE6clNEYQ6upPQnWO6KpJaODr6N7CNG1EXVEJPo0LEs+U+pET8I0wSrmP8nXg5oGd6dlnXqrkEM2bgZuZYydmBrqbow+hpDA8fl1jzWEJ+dMc7+wWSlQBrNwL66yeaJsZS+BIKm3ll7LbI5DlMw6A85FvzMRhJ3M7HqdxLZBjJPeuzEkboXfj4nwLF/30ektaOlTPNA="
-        file: runner/viscrna-seq-pipeline
+        file: run/viscrna-seq-pipeline
         skip_cleanup: true
         on:
           tags: true

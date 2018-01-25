@@ -1,0 +1,40 @@
+#!/usr/bin/env python
+'''
+Test the user script of the readily built AMI on the mock dataset.
+
+See build/build_image for the format of the AMI records.
+'''
+import os
+import sys
+import json
+import time
+import subprocess as sp
+
+
+class Tester:
+    script_fn = 'runner/viscrna-seq-pipeline'
+
+    def get_test_dataset_record(self):
+        '''Get the record for the test dataset.
+
+        NOTE: here we need to design an interface for the user that combines
+        unique addressing with easy-to-remember for humans.
+
+        NOTE: we do NOT pull out the data here!! The AMI does it there.
+        '''
+        #TODO TODO
+        return dataset_record
+
+    def test_ami(self):
+        ami_record = self.get_ami_records()['AMIs'][-1]
+        ami_id = ami_record['id']
+        dataset_record = self.get_test_dataset_record()
+
+
+
+if __name__ == '__main__':
+
+    print("TEST PACKER-BUILT AMI")
+    runner = Tester()
+    runner.test_ami()
+    print('Done. All good')

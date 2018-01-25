@@ -1,7 +1,0 @@
-#!/usr/bin/env bash
-set -euo pipefail
-IFS=$'\n\t'
-
-echo "MOCK RUNNER TEST"
-touch runner/viscrna-seq-pipeline
-echo "DONE"
