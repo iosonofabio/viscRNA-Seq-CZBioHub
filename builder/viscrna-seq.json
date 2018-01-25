@@ -5,10 +5,11 @@
     "aws_access_key": "{{env `AWS_ACCESS_KEY`}}",
     "aws_secret_key": "{{env `AWS_SECRET_KEY`}}",
     "aws_security_group_id": "{{env `AWS_SECURITY_GROUP_ID`}}",
-    "aws_region": "{{env `AWS_REGION`}}",
-    "aws_instance_type": "{{env `AWS_INSTANCE_TYPE`}}",
-    "aws_source_ami": "{{env `AWS_SOURCE_AMI`}}",
-    "aws_virtualization_type": "{{env `AWS_VIRTUALIZATION_TYPE`}}"
+    "aws_region": "us-west-2",
+    "aws_instance_type": "t2.micro",
+    "aws_source_ami": "ami-1b62b863",
+    "aws_virtualization_type": "pv"
+
   },
   "builders": [
     
@@ -26,8 +27,22 @@
       "ami_virtualization_type": "{{user `aws_virtualization_type`}}",
       
       "ssh_username": "ubuntu",
-      "ami_name": "{{user `packer_build_name`}} viscRNA-Seq [{{timestamp}}]",
-      "ami_description": "viscRNA-Seq deployment built with Packer.io"
+      "ami_name": "viscRNA-Seq [{{timestamp}}]",
+      "ami_description": "viscRNA-Seq deployment built with Packer.io",
+
+      "tags": {
+        "OS_Version": "Ubuntu",
+        "Release": "Latest"
+      },
+
+      "launch_block_device_mappings": [
+        {
+          "device_name": "/dev/sda1",
+          "volume_size": 12,
+          "volume_type": "gp2",
+          "delete_on_termination": true
+        }
+      ]
     }
   ],
   "provisioners": [

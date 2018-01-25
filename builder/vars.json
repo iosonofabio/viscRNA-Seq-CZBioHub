@@ -1,9 +1,0 @@
-{
-  "aws_access_key": "",
-  "aws_secret_key": "",
-  "aws_security_group_id": "",
-  "aws_region": "us-west-2",
-  "aws_instance_type": "t2.nano",
-  "aws_source_ami": "ami-1b62b863",
-  "aws_virtualization_type": "pv"
-}
