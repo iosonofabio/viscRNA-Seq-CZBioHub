@@ -43,9 +43,9 @@ class Builder:
     def find_packer(self):
         for packer in ('packer', 'packer-io'):
             try:
-                sp.run(packer, check=True)
+                sp.run([packer, '--version'], check=True)
                 break
-            except sp.CalledProcessError:
+            except (FileNotFoundError, sp.CalledProcessError):
                 continue
         else:
             raise IOError('Packer executable not found')
