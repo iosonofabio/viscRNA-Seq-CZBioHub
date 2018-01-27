@@ -10,6 +10,8 @@ language: generic
 
 jobs:
   include:
+    - stage: build_dry_image
+      script: ./build/build_image --dry
     - stage: build_image
       script: ./build/build_image
     - stage: test_image

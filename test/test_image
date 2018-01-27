@@ -25,8 +25,20 @@ class Tester:
         #TODO TODO
         return dataset_record
 
+    def find_ami(self):
+        git_commit = sp.run(
+                ['git', 'log', '-1', '--format=oneline'],
+                check=True,
+                stdout=sp.PIPE).stdout.split()[0]
+        for ami_record in self.get_ami_records()['AMIs'][::-1]:
+            if ami_record['git-commit'] == git_commit:
+                break
+        else:
+            raise ValueError('AMI from this git commit not found!')
+        return ami_record
+
     def test_ami(self):
-        ami_record = self.get_ami_records()['AMIs'][-1]
+        ami_record = self.find_ami()
         ami_id = ami_record['id']
         dataset_record = self.get_test_dataset_record()
 
