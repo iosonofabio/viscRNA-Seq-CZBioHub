@@ -5,7 +5,9 @@ notifications:
 
 os: linux
 dist: trusty
-language: generic
+language: python
+python:
+  - 3.6
 
 
 jobs:
