@@ -10,6 +10,11 @@ python:
   - 3.6
 
 
+before_install:
+  - pip install --user awscli
+  - export PATH=$PATH:$HOME/.local/bin
+
+
 jobs:
   include:
     - stage: build_dry_image
