@@ -21,7 +21,7 @@ The format of the JSON file is the following:
     [{
       'id': 'dsalkjalsa',
       'timestamp': 2138021983021,
-      'git-commit': 'dadsaf332ad',
+      'git-commits': ['dadsaf332ad'],
     },
     {
      ...
@@ -33,6 +33,7 @@ Of course this is redundant at the moment, but better safe than sorry.
 '''
 #TODO: add the backup bucket
 import os
+import sys
 import json
 import time
 import subprocess as sp
@@ -78,7 +79,7 @@ class Builder:
                check=True)
         try:
             with open('log_AMIs.json', 'rt') as f:
-                ami_records = json.load(f)['AMIs'][-1]
+                ami_records = json.load(f)['AMIs']
         finally:
             os.remove('log_AMIs.json')
         return ami_records
@@ -148,13 +149,53 @@ class Builder:
     def detach_ebs(self, ebs_id):
         sp.run(['aws', 'ec2', 'delete-snapshot', '--snapshot-id', ebs_id])
 
+    def get_git_commit(self):
+        git_commit = sp.run(
+                'git rev-parse HEAD',
+                shell=True,
+                check=True,
+                stdout=sp.PIPE).stdout
+        return git_commit
+
+    def check_rebuild(self):
+        git_commit = self.get_git_commit()
+
+        # If there is any AMI with ANY commit that has no diff in the
+        # build folder, it's our lucky day
+        ami_records = self.get_ami_records()
+        for ami_record in ami_records[::-1]:
+            for git_commit_ami in ami_record['git-commits'][::-1]:
+                out = sp.run(
+                    'git diff --name-only {:} {:}'.format(
+                        git_commit_ami,
+                        git_commit),
+                    shell=True,
+                    stdout=sp.PIPE,
+                    ).stdout.encode().split('\n')
+                for line in out:
+                    if line.startswith('build/'):
+                        break
+                else:
+                    return ami_record['id']
+
+        return None
+
+    def append_commit(self, ami_id, dry=False):
+        git_commit = self.get_git_commit()
+        ami_records = self.get_ami_records()
+        for ami_record in ami_records[::-1]:
+            if ami_record['id'] == ami_id:
+                ami_record['git-commits'].append(git_commit)
+                if dry:
+                    print('Dry: upload updated AMI records')
+                else:
+                    return self.set_ami_records(ami_records)
+
+        raise ValueError('AMI record not found!')
+
     def build_ami(self, dry=False):
         env = os.environ
         env['PACKER_LOG'] = 'true'
-
-        if dry:
-            print('Dry running of the AMI build step')
-            return
 
         # Generate unique token to delete the launch volume in case of failure
         # NOTE: this is redundant as packer has mechanisms to cover this corner,
@@ -164,21 +205,25 @@ class Builder:
         env['VISCRNA-SEQ_PACKER_TOKEN'] = token
         print('VISCRNA-SEQ_PACKER_TOKEN: {:}'.format(token))
 
+        if dry:
+            print('Dry running of the AMI build step')
+            return
+
         try:
-            # FIXME: use tee to split online
             proc = sp.run(' '.join([
                 self.packer,
                 '-machine-readable',
                 'build',
                 'build/viscrna-seq.json',
+                '|',
+                'tee',
+                'packer.log',
                 ]),
                 shell=True,
                 env=env,
-                stdout=sp.PIPE)
-            out = proc.stdout
-            with open('packer.log', 'wb') as f:
-                f.write(out)
-            print(out.decode())
+                )
+            with open('packer.log', 'rt') as f:
+                out = f.read()
 
             if proc.returncode:
                 raise RuntimeError('packer build exit with code {:}, aborting'.format(
@@ -222,7 +267,7 @@ class Builder:
             self.append_ami_to_records({
                 'id': ami_id,
                 'timestamp': timestamp,
-                'git-commit': git_commit,
+                'git-commits': [git_commit],
                 })
             #  FIXME
             raise RuntimeError('ABORTING: policies not done')
@@ -249,6 +294,14 @@ if __name__ == '__main__':
     print('Validate packer config')
     builder.validate_config()
 
-    print('Build AMI')
-    ami_id = builder.build_ami(dry=args.dry)
-    print('New AMI built: {:}'.format(ami_id))
+    print('Check whether rebuilding is necessary')
+    ami_id = builder.check_rebuild(dry=args.dry)
+
+    if ami_id is None:
+        print('Build AMI')
+        ami_id = builder.build_ami(dry=args.dry)
+        print('New AMI built: {:}'.format(ami_id))
+
+    else:
+        print('No rebuild necessary, piggyback git commit')
+        builder.append_commit(ami_id, dry=args.dry)
