@@ -195,21 +195,21 @@ class Builder:
             return
 
         try:
-            #proc = sp.run(' '.join([
-            #    self.packer,
-            #    '-machine-readable',
-            #    'build',
-            #    'build/viscrna-seq.json',
-            #    '|',
-            #    'tee',
-            #    'packer.log',
-            #    ]),
-            #    shell=True,
-            #    env=env,
-            #    )
-            #if proc.returncode:
-            #    raise RuntimeError('packer build exit with code {:}, aborting'.format(
-            #        proc.returncode))
+            proc = sp.run(' '.join([
+                self.packer,
+                '-machine-readable',
+                'build',
+                'build/viscrna-seq.json',
+                '|',
+                'tee',
+                'packer.log',
+                ]),
+                shell=True,
+                env=env,
+                )
+            if proc.returncode:
+                raise RuntimeError('packer build exit with code {:}, aborting'.format(
+                    proc.returncode))
 
             # Check the presence of artifacts
             with open('packer.log', 'rt') as f:
@@ -252,7 +252,7 @@ class Builder:
                 'git-commits': [git_commit],
                 })
         except:
-            #self.deregister_ami(ami_id)
+            self.deregister_ami(ami_id)
             raise
 
 
