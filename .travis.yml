@@ -11,7 +11,7 @@ python:
 
 
 before_install:
-  - pip install --user awscli
+  - pip install awscli
   - export PATH=$PATH:$HOME/.local/bin
 
 
