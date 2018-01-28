@@ -37,6 +37,7 @@ import json
 import time
 import subprocess as sp
 import argparse
+import random
 
 
 class Builder:
@@ -102,7 +103,7 @@ class Builder:
         records['AMIs'].append(ami_record)
         self.set_ami_records(records)
 
-    def find_ami_ebs(self, ami_id):
+    def find_ebs_from_description(self, substring):
         out = sp.run(
                 ['aws', 'ec2', 'describe-snapshots'],
                 check=True,
@@ -111,7 +112,28 @@ class Builder:
         for snap in di['Snapshots']:
             if 'Description' not in snap:
                 continue
-            if ami_id in snap['Description']:
+            if substring in snap['Description']:
+                break
+        else:
+            raise ValueError('EBS volume not found')
+        return snap['SnapshotId']
+
+    def find_ebs_from_tags(self, tag_dict):
+        out = sp.run(
+                ['aws', 'ec2', 'describe-snapshots'],
+                check=True,
+                stdout=sp.PIPE).stdout
+        di = json.loads(out)
+        for snap in di['Snapshots']:
+            if 'Tags' not in snap:
+                continue
+            found = True
+            for key, val in tag_dict.items():
+                if key not in snap['Tags']:
+                    found = False
+                elif snap['Tags'][key] != val:
+                    found = False
+            if found:
                 break
         else:
             raise ValueError('EBS volume not found')
@@ -120,7 +142,10 @@ class Builder:
     def deregister_ami(self, ami_id):
         sp.run(['aws', 'ec2', 'deregister-image', '--image-id', ami_id],
                check=True)
-        ebs_id = self.find_ami_ebs(ami_id)
+        ebs_id = self.find_ebs_from_description(ami_id)
+        self.detach_ebs(ebs_id)
+
+    def detach_ebs(self, ebs_id):
         sp.run(['aws', 'ec2', 'delete-snapshot', '--snapshot-id', ebs_id])
 
     def build_ami(self, dry=False):
@@ -129,19 +154,39 @@ class Builder:
 
         if dry:
             print('Dry running of the AMI build step')
-        else:
+            return
+
+        # Generate unique token to delete the launch volume in case of failure
+        # NOTE: this is redundant as packer has mechanisms to cover this corner,
+        # but for the time being better safe than sorry
+        token = str(random.randint(0, 1e10))
+        env = os.environ
+        env['VISCRNA-SEQ_PACKER_TOKEN'] = token
+        print('VISCRNA-SEQ_PACKER_TOKEN: {:}'.format(token))
+
+        try:
             # FIXME: use tee to split online
-            out = sp.run(' '.join([
+            proc = sp.run(' '.join([
                 self.packer,
                 '-machine-readable',
                 'build',
                 'build/viscrna-seq.json',
                 ]),
-                check=True,
-                stdout=sp.PIPE).stdout
-            with open('packer.log', 'wt') as f:
+                shell=True,
+                env=env,
+                stdout=sp.PIPE)
+            out = proc.stdout
+            with open('packer.log', 'wb') as f:
                 f.write(out)
-            print(out)
+            print(out.decode())
+
+            if proc.returncode:
+                raise RuntimeError('packer build exit with code {:}, aborting'.format(
+                    proc.returncode))
+
+            # Check the presence of artifacts
+            if 'no artifacts were created' in out:
+                raise RuntimeError('packer could not build artifacts')
 
             # Add the record to the AMI records
             out = out.split('\n')
@@ -149,26 +194,40 @@ class Builder:
                 if 'The artifacts of successful builds are:' in line:
                     break
             else:
-                raise IOError('Could not build AMI!')
+                raise RuntimeError('packer build failed for unknown reasons, see log')
             ami_id = out[i+3].split(',')[5].split(':')[1]
 
-            # If the AMI does not make it into the records for ANY reasons,
-            # we better make triple sure we kill it
+        except RuntimeError:
+            print('Ensuring detachment of ENS volume')
+            found = True
             try:
-                timestamp = str(time.time())
-                git_commit = sp.run(
-                        ['git', 'log', '-1', '--format=oneline'],
-                        check=True,
-                        stdout=sp.PIPE).stdout.split()[0]
-                self.append_ami_to_records({
-                    'id': ami_id,
-                    'timestamp': timestamp,
-                    'git-commit': git_commit,
-                    })
-                #  FIXME
-                raise RuntimeError('ABORTING: policies not done')
-            except:
-                self.deregister_ami(ami_id)
+                ebs_id = self.find_ebs_from_tags(
+                        {'viscrnaseq_packer_token': token},
+                        )
+            except ValueError:
+                found = False
+            if found:
+                self.detach_ebs(ebs_id)
+            print('Volume detached')
+            return
+
+        # If the AMI does not make it into the records for ANY reasons,
+        # we better make triple sure we kill it
+        try:
+            timestamp = str(time.time())
+            git_commit = sp.run(
+                    ['git', 'log', '-1', '--format=oneline'],
+                    check=True,
+                    stdout=sp.PIPE).stdout.split()[0]
+            self.append_ami_to_records({
+                'id': ami_id,
+                'timestamp': timestamp,
+                'git-commit': git_commit,
+                })
+            #  FIXME
+            raise RuntimeError('ABORTING: policies not done')
+        except:
+            self.deregister_ami(ami_id)
 
 
 if __name__ == '__main__':

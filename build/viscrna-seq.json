@@ -8,7 +8,9 @@
     "aws_region": "us-west-2",
     "aws_instance_type": "t2.micro",
     "aws_source_ami": "ami-1b62b863",
-    "aws_virtualization_type": "pv"
+    "aws_virtualization_type": "pv",
+    "travis_commit": "{{env `TRAVIS_COMMIT`}}",
+    "viscrnaseq_packer_token": "{{env `VISCRNA-SEQ_PACKER_TOKEN`}}"
 
   },
   "builders": [
@@ -27,13 +29,25 @@
       "ami_virtualization_type": "{{user `aws_virtualization_type`}}",
       
       "ssh_username": "ubuntu",
-      "ami_name": "viscRNA-Seq [{{timestamp}}]",
+      "ami_name": "viscRNA-Seq {{user `travis_commit`}} [{{timestamp}}]",
       "ami_description": "viscRNA-Seq deployment built with Packer.io",
 
       "tags": {
-        "OS_Version": "Ubuntu",
-        "Release": "Latest"
+        "Release": "{{user `travis_commit`}}",
+        "Name": "viscRNA-Seq {{user `travis_commit`}} [{{timestamp}}]"
       },
+
+      "run_tags": {
+        "Name": "viscRNA-Seq launch instance {{user `travis_commit`}} [{{timestamp}}]",
+	"viscrnaseq_packer_token": "{{user `viscrnaseq_packer_token`}}"
+      },
+
+      "run_volume_tags": {
+        "Name": "viscRNA-Seq launch volume {{user `travis_commit`}} [{{timestamp}}]",
+	"viscrnaseq_packer_token": "{{user `viscrnaseq_packer_token`}}"
+      },
+
+      "shutdown_behavior": "terminate",
 
       "launch_block_device_mappings": [
         {
