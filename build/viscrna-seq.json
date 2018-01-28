@@ -4,7 +4,7 @@
   "variables": {    
     "aws_access_key": "{{env `aws_access_key`}}",
     "aws_secret_key": "{{env `aws_secret_key`}}",
-    "aws_security_group_id": "{{env `aws_security_group_id`}}",
+    "aws_security_group_id": "",
     "aws_region": "us-west-2",
     "aws_instance_type": "t2.micro",
     "aws_source_ami": "ami-1b62b863",
