@@ -2,12 +2,18 @@
 '''
 viscRNA-Seq Pipeline runner.
 
-This is an absract script (!), so it cannot run per se because the pipeline
+This script is to be used on user's machines to launch the viscRNA-Seq pipeline
+on Amazon EC2 instances in the cloud. Although the script will by default wait
+for the pipeline to finish, killing it after the initial launching period has
+no consequence on the pipeline itself, which runs asynchronously.
+
+This is an abstract script (!), so it cannot run per se because the pipeline
 comes in different flavours, e.g. for different viruses. In order to create a
-concrete instance of this script, the VISCRNASEQ_GIT_BRANCH global variable
-must be set to non-empty. The reason I don't even allow environment variables
-or the likes is data consistency: only scripts deployed from CI in a specific
-branch will and should be usable. No big data crunching without testing.
+concrete instance of this script, the AMI_ID, GIT_COMMIT and
+GIT_BRANCH global variables must be set to non-empty. The reason I
+don't even allow environment variables or the likes is data consistency: only
+scripts deployed from CI in a specific branch will and should be usable. No big
+data crunching without testing.
 '''
 import os
 import sys
@@ -17,21 +23,57 @@ import argparse
 import subprocess as sp
 
 
-VISCRNASEQ_GIT_BRANCH=''
+AMI_ID = ''
+GIT_BRANCH = ''
+GIT_COMMIT = ''
 
 
 class Runner:
-    def get_ami_records(self):
-        sp.run(['aws', 's3', 'cp',
-                's3://viscrna-seq/development/CI/log_AMIs.json',
-                'log_AMIs.json'],
-               check=True)
-        try:
-            with open('log_AMIs.json', 'rt') as f:
-                ami_records = json.load(f)['AMIs'][-1]
-        finally:
-            os.remove('log_AMIs.json')
-        return ami_records
+    def launch_instance(self):
+        #TODO
+        ... AMI_ID...
+
+        self.instance_id = instance_id
+        print('EC2 instance id: {:}'.format(instance_id))
+        return instance_id
+
+    def terminate_instance(self, instance_id):
+        sp.call(' '.join([
+            'aws', 'ec2',
+            #FIXME FIXME
+            ... self.instance_id ... 
+            '/pipeline',
+            '--input', input_path,
+            '--output', output_path,
+            '--output-gdrive', output_gdrive_path,
+            '--id', dataset_id,
+            ]),
+            shell=True,
+            check=True,
+        )
+
+    def run_pipeline(
+            self,
+            input_path,
+            output_path,
+            output_gdrive_path,
+            dataset_id,
+            ):
+
+        sp.call(' '.join([
+            'aws', 'ec2',
+            #FIXME FIXME
+            ... self.instance_id ... 
+            '/pipeline',
+            '--input', input_path,
+            '--output', output_path,
+            '--output-gdrive', output_gdrive_path,
+            '--id', dataset_id,
+            ]),
+            shell=True,
+            check=True,
+        )
+
 
 
 if __name__ == '__main__':
@@ -41,17 +83,35 @@ if __name__ == '__main__':
     spas = pa.add_subparsers()
     par = spas.add_parser('run')
     par.add_argument(
-            '--input-bucket', required=True,
+            '--input', required=True,
             help='The location of the raw reads')
     par.add_argument(
-            '--output-bucket', required=True,
+            '--output', required=True,
             help='The location of the output S3 bucket')
     par.add_argument(
             '--output-gdrive', required=False, default=None,
             help='The location on GoogleDrive where to store the count table')
+    par.add_argument(
+            '--id', required=True,
+            help='Sets a unique ID for the dataset, for record keeping')
 
     pas = spas.add_parser('stop')
-    pas.add_argument('ami-id')
+    pas.add_argument(
+            'instance-id',
+            help='The id of the EC2 instance to stop')
 
     pa.parse_args()
 
+    run = Runner()
+    #TODO
+    if ...
+        instance_id = run.launch_instance()
+        run.run_pipeline(
+                input_path=args.input,
+                output_path=args.output,
+                output_gdrive_path=args.output_gdrive,
+                dataset_id=args.id,
+                )
+
+    else:
+        run.terminate_instance(args.instance_id)

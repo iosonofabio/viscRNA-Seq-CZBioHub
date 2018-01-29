@@ -1,0 +1,58 @@
+#!/usr/bin/env python
+'''
+viscRNA-Seq pipeline local script.
+
+This script runs on the newly allocated EC2 instance as directed by the viscrna-seq-pipeline script and does the heavy lifting.
+'''
+import os
+import sys
+import subprocess as sp
+import argparse
+
+
+class Pipeline:
+    def __init__(
+            self,
+            input_path,
+            output_path,
+            output_gdrive_path,
+            dataset_id,
+            ):
+    self.input_path = input_path
+    self.output_path = output_path
+    self.output_gdrive_path = output_gdrive_path
+    self.dataset_id = dataset_id
+
+    def __call__(self):
+        print('MOCK RUN')
+
+
+
+if __name__ == '__main__':
+
+    pa = argparse.ArgumentParser(description='''viscRNA-Seq pipeline''')
+    pa.add_argument(
+            '--input', required=True,
+            help='The location of the raw reads')
+    pa.add_argument(
+            '--output', required=True,
+            help='The location of the output S3 bucket')
+    pa.add_argument(
+            '--output-gdrive', required=False, default=None,
+            help='The location on GoogleDrive where to store the count table')
+    pa.add_argument(
+            '--id', required=True,
+            help='Sets a unique ID for the dataset, for record keeping')
+
+    args = pa.parse_args()
+
+    print('Ready the pipeline')
+    pipe = Pipeline(
+            input_path=args.input,
+            output_path=args.output,
+            output_gdrive_path=args.output_gdrive,
+            dataset_id=args.id,
+            )
+
+    print('Run the pipeline')
+    pipe()

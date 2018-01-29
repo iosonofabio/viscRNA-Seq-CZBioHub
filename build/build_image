@@ -142,7 +142,7 @@ class Builder:
                 stdout=sp.PIPE).stdout.decode().rstrip('\n')
         return git_commit
 
-    def check_rebuild(self):
+    def get_compatible_ami(self):
         git_commit = self.get_git_commit()
 
         # If there is any AMI with ANY commit that has no diff in the
@@ -276,7 +276,7 @@ if __name__ == '__main__':
     builder.validate_config()
 
     print('Check whether rebuilding is necessary')
-    ami_id = builder.check_rebuild()
+    ami_id = builder.get_compatible_ami()
 
     if ami_id is None:
         print('Build AMI')

@@ -3,6 +3,14 @@
 Test the user script of the readily built AMI on the mock dataset.
 
 See build/build_image for the format of the AMI records.
+
+The datast records have the following format:
+
+{
+ 'id': <unique id>,
+ 'description': <optional description>,
+ 'path': 's3://<S3 address to tgz>,
+}
 '''
 import os
 import sys
@@ -12,8 +20,6 @@ import subprocess as sp
 
 
 class Tester:
-    script_fn = 'runner/viscrna-seq-pipeline'
-
     def get_test_dataset_record(self):
         '''Get the record for the test dataset.
 
@@ -22,31 +28,93 @@ class Tester:
 
         NOTE: we do NOT pull out the data here!! The AMI does it there.
         '''
-        #TODO TODO
-        return dataset_record
+        return {
+                'id': '10X_P5_7',
+                'description': 'Test dataset from MACA',
+                'path': 's3://czbiohub-maca/10x_data/10X_P5_7/10X_P5_7.tgz',
+                'platform': '10X-singlecell-v2',
+                }
 
-    def find_ami(self):
+    def get_git_commit(self):
         git_commit = sp.run(
-                ['git', 'log', '-1', '--format=oneline'],
+                'git rev-parse HEAD',
+                shell=True,
                 check=True,
-                stdout=sp.PIPE).stdout.split()[0]
-        for ami_record in self.get_ami_records()['AMIs'][::-1]:
-            if ami_record['git-commit'] == git_commit:
-                break
-        else:
-            raise ValueError('AMI from this git commit not found!')
-        return ami_record
+                stdout=sp.PIPE).stdout.decode().rstrip('\n')
+        return git_commit
+
+    def get_compatible_ami(self):
+        git_commit = self.get_git_commit()
+
+        # If there is any AMI with ANY commit that has no diff in the
+        # build folder, it's our lucky day
+        ami_records = self.get_ami_records()
+        for ami_record in ami_records['AMIs'][::-1]:
+            for git_commit_ami in ami_record['git-commits'][::-1]:
+                out = sp.run(
+                    'git diff --name-only {:} {:}'.format(
+                        git_commit_ami,
+                        git_commit),
+                    shell=True,
+                    stdout=sp.PIPE,
+                    ).stdout.encode().split('\n')
+                for line in out:
+                    if line.startswith('build/'):
+                        break
+                else:
+                    return ami_record['id']
+
+        return None
+
+    def transpile_pipeline(self):
+        git_commit = os.getenv('TRAVIS_COMMIT')
+        git_branch = os.getenv('TRAVIS_BRANCH')
+        ami_id = self.get_compatible_ami()
+
+        # Fill the globals in the script
+        fn_in = 'run/viscrna-seq-pipeline'
+        fn_out = 'viscrna-seq-pipeline'
+        with open(fn_in, 'rt') as fin:
+            with open(fn_out, 'wt') as fout:
+                for line in fin:
+                    if line.startswith('VISCRNASEQ_GIT_COMMIT = '):
+                        fout.write('VISCRNASEQ_GIT_COMMIT = {:}\n'.format(
+                            git_commit))
+                    elif line.startswith('VISCRNASEQ_GIT_BRANCH = '):
+                        fout.write('VISCRNASEQ_GIT_BRANCH = {:}\n'.format(
+                            git_branch))
+                    if line.startswith('VISCRNASEQ_AMI_ID = '):
+                        fout.write('VISCRNASEQ_AMI_ID = {:}\n'.format(
+                            ami_id))
+                    else:
+                        fout.write(line)
 
     def test_ami(self):
-        ami_record = self.find_ami()
-        ami_id = ami_record['id']
         dataset_record = self.get_test_dataset_record()
-
+        call = ' '.join([
+            './viscrna-seq-pipeline',
+            '--input', dataset_record['path'],
+            '--output', 'none',
+            '--output-gdrive', 'none',
+            '--id', dataset_record['id'],
+            ])
+        print(call)
+        sp.run(
+            call,
+            shell=True,
+            check=True,
+            )
 
 
 if __name__ == '__main__':
 
-    print("TEST PACKER-BUILT AMI")
-    runner = Tester()
-    runner.test_ami()
+    print('TESTER')
+    tester = Tester()
+
+    print('TRANSPILE PIPELINE')
+    tester.transpile_pipeline()
+
+    print('TEST PIPELINE ON MACA DATA')
+    tester.test_ami()
+
     print('Done. All good')
