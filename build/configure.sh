@@ -44,5 +44,8 @@ tar -xvf $tra.tar.gz
 /tmp/append_virus_to_transcriptome --virus-gb /assets/references/virus_genome/$vir --genome-fasta /assets/references/transcriptome/$tra/fasta/genome.fa --transcriptome-gtf /assets/references/transcriptome/$tra/genes/genes.gtf --output /assets/references/transcriptome/combined
 rm -rf /assets/references/transcriptome/$tra
 
+echo "Set up pipeline script server side"
+sudo mv /tmp/pipeline /usr/local/bin/
+
 echo "DONE"
 exit 0

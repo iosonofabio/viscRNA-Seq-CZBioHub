@@ -42,7 +42,7 @@ class Runner:
             'aws', 'ec2',
             #FIXME FIXME
             ... self.instance_id ... 
-            '/use/bin/pipeline',
+            '/usr/local/bin/pipeline',
             '--input-data', input_data_path,
             '--input-samplesheet', input_samplesheet_path,
             '--output', output_path,

@@ -68,7 +68,7 @@
     {
       "type": "file",
       "source": "build/pipeline",
-      "destination": "/usr/bin/pipeline"
+      "destination": "/tmp/pipeline"
     },
     {
       "type": "file",
