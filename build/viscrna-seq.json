@@ -61,21 +61,6 @@
   ],
   "provisioners": [
     {
-      "type": "file",
-      "source": "assets/mCMV/NC_004065_1.gb",
-      "destination": "/tmp/NC_004065_1.gb"
-    },
-    {
-      "type": "file",
-      "source": "build/pipeline",
-      "destination": "/tmp/pipeline"
-    },
-    {
-      "type": "file",
-      "source": "build/append_virus_to_transcriptome",
-      "destination": "/tmp/append_virus_to_transcriptome"
-    },
-    {
       "type": "shell",
       "script": "build/configure.sh",
       "inline_shebang": "/bin/bash -ex",
