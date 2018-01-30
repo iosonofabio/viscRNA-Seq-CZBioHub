@@ -28,7 +28,7 @@ sudo chmod -R a+rwX /assets
 mkdir -p /assets/references/virus_genome
 mv /tmp/$vir /assets/references/virus_genome/$vir
 mkdir -p /assets/references/transcriptome
-cd /assets/transcriptome
+cd /assets/references/transcriptome
 wget http://cf.10xgenomics.com/supp/cell-exp/$tra.tar.gz
 tar -xvf $tra.tar.gz
 rm -rf $tra.tar.gz
