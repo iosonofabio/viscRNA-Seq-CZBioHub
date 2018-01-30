@@ -156,7 +156,7 @@ class Builder:
                         git_commit),
                     shell=True,
                     stdout=sp.PIPE,
-                    ).stdout.encode().split('\n')
+                    ).stdout.decode().split('\n')
                 for line in out:
                     if line.startswith('build/'):
                         break
