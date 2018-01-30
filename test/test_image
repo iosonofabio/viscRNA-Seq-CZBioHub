@@ -28,10 +28,12 @@ class Tester:
 
         NOTE: we do NOT pull out the data here!! The AMI does it there.
         '''
+        # Use 10X-genomics tiny BCL file
         return {
-                'id': '10X_P5_7',
-                'description': 'Test dataset from MACA',
-                'path': 's3://czbiohub-maca/10x_data/10X_P5_7/10X_P5_7.tgz',
+                'id': '10X',
+                'description': 'Test dataset from 10X Genomics',
+                'data_path': 'http://cf.10xgenomics.com/supp/cell-exp/cellranger-tiny-bcl-1.2.0.tar.gz',
+                'samplesheet_path': 'http://cf.10xgenomics.com/supp/cell-exp/cellranger-tiny-bcl-samplesheet-1.2.0.csv',
                 'platform': '10X-singlecell-v2',
                 }
 
@@ -93,7 +95,8 @@ class Tester:
         dataset_record = self.get_test_dataset_record()
         call = ' '.join([
             './viscrna-seq-pipeline',
-            '--input', dataset_record['path'],
+            '--input-data', dataset_record['data_path'],
+            '--input-samplesheet', dataset_record['samplesheet_path'],
             '--output', 'none',
             '--output-gdrive', 'none',
             '--id', dataset_record['id'],

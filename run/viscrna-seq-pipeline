@@ -42,8 +42,9 @@ class Runner:
             'aws', 'ec2',
             #FIXME FIXME
             ... self.instance_id ... 
-            '/pipeline',
-            '--input', input_path,
+            '/use/bin/pipeline',
+            '--input-data', input_data_path,
+            '--input-samplesheet', input_samplesheet_path,
             '--output', output_path,
             '--output-gdrive', output_gdrive_path,
             '--id', dataset_id,
@@ -64,8 +65,9 @@ class Runner:
             'aws', 'ec2',
             #FIXME FIXME
             ... self.instance_id ... 
-            '/pipeline',
-            '--input', input_path,
+            '/usr/bin/pipeline',
+            '--input-data', input_data_path,
+            '--input-samplesheet', input_samplesheet_path,
             '--output', output_path,
             '--output-gdrive', output_gdrive_path,
             '--id', dataset_id,
@@ -82,9 +84,12 @@ if __name__ == '__main__':
     pa = argparse.ArgumentParser(description='''viscRNA-Seq pipeline''')
     spas = pa.add_subparsers()
     par = spas.add_parser('run')
-    par.add_argument(
-            '--input', required=True,
+    pa.add_argument(
+            '--input-data', required=True,
             help='The location of the raw reads')
+    pa.add_argument(
+            '--input-samplesheet', required=True,
+            help='The location of the samplesheet')
     par.add_argument(
             '--output', required=True,
             help='The location of the output S3 bucket')
@@ -107,7 +112,8 @@ if __name__ == '__main__':
     if ...
         instance_id = run.launch_instance()
         run.run_pipeline(
-                input_path=args.input,
+                input_data_path=args.input_data,
+                input_samplesheet_path=args.input_samplesheet,
                 output_path=args.output,
                 output_gdrive_path=args.output_gdrive,
                 dataset_id=args.id,

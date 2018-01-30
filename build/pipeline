@@ -13,18 +13,78 @@ import argparse
 class Pipeline:
     def __init__(
             self,
-            input_path,
+            input_data_path,
+            input_samplesheet_path,
             output_path,
             output_gdrive_path,
             dataset_id,
             ):
-    self.input_path = input_path
-    self.output_path = output_path
-    self.output_gdrive_path = output_gdrive_path
-    self.dataset_id = dataset_id
+
+        self.input_data_path = input_data_path
+        self.input_samplesheet_path = input_samplesheet_path
+        self.output_path = output_path
+        self.output_gdrive_path = output_gdrive_path
+        self.dataset_id = dataset_id
+
+    def get_data(self, path):
+        if path.startswith('s3://'):
+            return self.get_data_s3(path)
+        elif path.startswith('http://') or path.startswith('https://'):
+            return self.get_data_url(path)
+        else:
+            raise ValueError('Type of data source not recognized: {:}'.format(path))
+
+    def get_data_s3(self, url):
+        fn = url.split('/')[-1]
+        sp.run(' '.join([
+            'aws', 's3', 'cp',
+            url, fn,
+            ]),
+            shell=True,
+            check=True,
+            )
+
+    def get_data_url(self, url):
+        sp.run(' '.join([
+            'wget', url,
+            ]),
+            shell=True,
+            check=True,
+            )
 
     def __call__(self):
-        print('MOCK RUN')
+        print('RUN PIPELINE')
+        print('Make fastq')
+        sp.run(' '.join([
+            'cellranger',
+            'mkfastq'
+            '--id', self.dataset_id,
+            '--run', self.input_data_path_unpacked,
+            '--samplesheet', self.input_samplesheet,
+            ]),
+            shell=True,
+            check=True)
+
+        print('Count genes')
+        sp.run(' '.join([
+            'cellranger',
+            'count'
+            '--id='+self.dataset_id,
+            '--transcriptome=/assets/references/transcriptome/combined',
+            '--fastqs='+self.dataset_id,
+            '--sample='+self.dataset_id,
+            '--expect-cells=5000',
+            ]),
+            shell=True,
+            check=True)
+
+        print('Transfer reads')
+        # TODO
+
+        print('Transfer count table')
+        # TODO
+
+        print('Done')
 
 
 
@@ -32,8 +92,11 @@ if __name__ == '__main__':
 
     pa = argparse.ArgumentParser(description='''viscRNA-Seq pipeline''')
     pa.add_argument(
-            '--input', required=True,
+            '--input-data', required=True,
             help='The location of the raw reads')
+    pa.add_argument(
+            '--input-samplesheet', required=True,
+            help='The location of the samplesheet')
     pa.add_argument(
             '--output', required=True,
             help='The location of the output S3 bucket')
@@ -48,7 +111,8 @@ if __name__ == '__main__':
 
     print('Ready the pipeline')
     pipe = Pipeline(
-            input_path=args.input,
+            input_data_path=args.input_data,
+            input_samplesheet_path=args.input_samplesheet,
             output_path=args.output,
             output_gdrive_path=args.output_gdrive,
             dataset_id=args.id,

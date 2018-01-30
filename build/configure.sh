@@ -32,5 +32,15 @@ tar -xvf /tmp/cellranger.tar.gz -C /tmp
 sudo mv /tmp/cellranger-2.1.0/* /usr/local/bin/
 cellranger sitecheck
 
+echo "Compute combined transcriptome hashes"
+vir="NC_004065_1.gb"
+tra="refdata-cellranger-mm10-1.2.0"
+mkdir -p /assets/references/transcriptome
+cd /assets/transcriptome
+wget http://cf.10xgenomics.com/supp/cell-exp/$tra.tar.gz
+tar -xvf $tra.tar.gz
+/tmp/append_virus_to_transcriptome --virus-gb /assets/references/virus_genome/$vir --genome-fasta /assets/references/transcriptome/$tra/fasta/genome.fa --transcriptome-gtf /assets/references/transcriptome/$tra/genes/genes.gtf --output /assets/references/transcriptome/combined
+rm -rf /assets/references/transcriptome/$tra
+
 echo "DONE"
 exit 0
