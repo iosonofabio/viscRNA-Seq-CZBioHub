@@ -23,5 +23,3 @@ jobs:
       script: ./build/build_image --dry
     - stage: build_image
       script: ./build/build_image
-    - stage: test_image
-      script: ./test/test_image
