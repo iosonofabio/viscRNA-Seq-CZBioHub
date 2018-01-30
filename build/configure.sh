@@ -29,7 +29,7 @@ mkdir -p /assets/references/virus_genome
 mv /tmp/$vir /assets/references/virus_genome/$vir
 mkdir -p /assets/references/transcriptome
 cd /assets/references/transcriptome
-wget http://cf.10xgenomics.com/supp/cell-exp/$tra.tar.gz
+wget http://cf.10xgenomics.com/supp/cell-exp/$tra.tar.gz --nv
 tar -xvf $tra.tar.gz
 rm -rf $tra.tar.gz
 sudo /tmp/append_virus_to_transcriptome --virus-gb $HOME/assets/references/virus_genome/$vir --genome-fasta $HOME/assets/references/transcriptome/$tra/fasta/genome.fa --transcriptome-gtf $HOME/assets/references/transcriptome/$tra/genes/genes.gtf --output /assets/references/transcriptome/combined
