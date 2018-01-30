@@ -63,7 +63,7 @@
     {
       "type": "file",
       "source": "assets/mCMV/NC_004065_1.gb",
-      "destination": "/assets/references/virus_genome/NC_004065_1.gb"
+      "destination": "/tmp/NC_004065_1.gb"
     },
     {
       "type": "file",

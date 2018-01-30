@@ -35,6 +35,8 @@ cellranger sitecheck
 echo "Compute combined transcriptome hashes"
 vir="NC_004065_1.gb"
 tra="refdata-cellranger-mm10-1.2.0"
+mkdir -p /assets/references/virus_genome
+mv /tmp/$vir /assets/references/virus_genome/$vir
 mkdir -p /assets/references/transcriptome
 cd /assets/transcriptome
 wget http://cf.10xgenomics.com/supp/cell-exp/$tra.tar.gz
