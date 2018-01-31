@@ -169,7 +169,7 @@ class Builder:
                             '--image-ids', '"{:}"'.format(ami_record['id']),
                             ]),
                             shell=True,
-                            chek=True)
+                            check=True)
                     except sp.CalledProcessError:
                         continue
 
