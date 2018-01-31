@@ -4,11 +4,6 @@ IFS=$'\n\t'
 
 echo "PACKER PROVISIONER"
 
-#echo "Install conda (it should be there but ok)"
-#wget --quiet https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda.sh
-#bash /tmp/miniconda.sh -b -p $HOME/anaconda
-#rm -rf /tmp/miniconda.sh
-
 echo "Add miniconda to PATH"
 export PATH=$HOME/anaconda/bin:$PATH
 echo 'export PATH=$HOME/anaconda/bin:$PATH' >> ~/.bashrc
@@ -23,17 +18,28 @@ conda update -q conda
 echo "Compute combined transcriptome hashes"
 vir="NC_004065_1.gb"
 tra="refdata-cellranger-mm10-1.2.0"
+
+echo "Make folders"
 sudo mkdir /assets
 sudo chmod -R a+rwX /assets
 mkdir -p /assets/references/virus_genome
 mv /tmp/$vir /assets/references/virus_genome/$vir
 mkdir -p /assets/references/transcriptome
 cd /assets/references/transcriptome
+
+echo "wget reference transcriptome"
 wget -nv http://cf.10xgenomics.com/supp/cell-exp/$tra.tar.gz
-tar -xvf $tra.tar.gz
+
+echo "Extract reference transcriptome"
+tar -xf $tra.tar.gz
 rm -rf $tra.tar.gz
+
+echo "Make combined hashes"
 sudo /tmp/append_virus_to_transcriptome --virus-gb $HOME/assets/references/virus_genome/$vir --genome-fasta $HOME/assets/references/transcriptome/$tra/fasta/genome.fa --transcriptome-gtf $HOME/assets/references/transcriptome/$tra/genes/genes.gtf --output /assets/references/transcriptome/combined
+
+echo "Remove original transcriptome"
 rm -rf /assets/references/transcriptome/$tra
+echo "Combined transcriptome hashed"
 
 echo "Set up pipeline script server side"
 sudo mv /tmp/pipeline /usr/local/bin/
