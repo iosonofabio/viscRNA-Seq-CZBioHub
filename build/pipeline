@@ -70,7 +70,7 @@ class Pipeline:
             'cellranger',
             'count'
             '--id='+self.dataset_id,
-            '--transcriptome=/assets/references/transcriptome/combined',
+            '--transcriptome=/assets/references/combined/transcriptome',
             '--fastqs='+self.dataset_id,
             '--sample='+self.dataset_id,
             '--expect-cells=5000',
