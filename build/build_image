@@ -152,11 +152,9 @@ class Builder:
                 'packer.log',
                 ]),
                 shell=True,
+                check=True,
                 env=env,
                 )
-            if proc.returncode:
-                raise RuntimeError('packer build exit with code {:}, aborting'.format(
-                    proc.returncode))
 
             # Check the presence of artifacts
             with open('packer.log', 'rt') as f:

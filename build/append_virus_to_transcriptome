@@ -21,7 +21,7 @@ def main(
 
     print('Save virus FASTA')
     virus_fasta = virus_gb[:-2]+'fasta'
-    SeqIO.write(virus_seq, virus_fasta)
+    SeqIO.write(virus_seq, virus_fasta, 'fasta')
 
     print('Save virus GTF')
     virus_gtf = virus_gb[:-2]+'gtf'
