@@ -72,7 +72,8 @@
       "environment_vars": [
        "TRAVIS_COMMIT={{user `travis_commit`}}",
        "AWS_ACCESS_KEY_ID={{user `aws_access_key`}}",
-       "AWS_SECRET_ACCESS_KEY={{user `aws_secret_key`}}"
+       "AWS_SECRET_ACCESS_KEY={{user `aws_secret_key`}}",
+       "AWS_DEFAULT_REGION={{user `aws_region`}}"
       ]
     }
   ]
