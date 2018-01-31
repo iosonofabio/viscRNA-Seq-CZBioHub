@@ -15,6 +15,10 @@ before_install:
   - export PATH=$PATH:$HOME/.local/bin
   - export AWS_ACCESS_KEY_ID=$aws_access_key
   - export AWS_SECRET_ACCESS_KEY=$aws_secret_key
+  - export AWS_DEFAULT_REGION=us-west-2
+  # Load all branches for AMI recycling
+  - git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*" 1>/dev/null
+  - git fetch origin -q
 
 
 jobs:
@@ -22,7 +26,7 @@ jobs:
     - stage: build_dry_image
       script: ./build/build_image --dry
     - stage: build_image
-      script: ./build/build_image
+      script: ./build/build_long 40 ./build/build_image
     - stage: test_image
       script: ./test/test_image
       deploy:

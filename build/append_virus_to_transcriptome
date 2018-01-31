@@ -15,21 +15,17 @@ def main(
         fdn_output):
 
     virus_seq = SeqIO.read(virus_gb, 'gb')
-    virus_str = str(virus_seq.seq)
 
     fdn_output = fdn_output.rstrip('/')+'/'
     os.makedirs(fdn_output)
 
-    # Append virus as an additional chromosome
-    from Bio.SeqIO.FastaIO import SimpleFastaParser
-    with open(genome_fasta, 'rt') as f:
-        n_chromosomes = len(SimpleFastaParser(f))
-    with open(genome_fasta, 'at') as f:
-        f.write('> {:}\n{:}\n'.format(virus_seq.id, virus_str))
+    print('Save virus FASTA')
+    virus_fasta = virus_gb[:-2]+'fasta'
+    SeqIO.write(virus_seq, virus_fasta)
 
-    # Make virus gtf
-    v_chrom = n_chromosomes + 1
-    virus_gtf = []
+    print('Save virus GTF')
+    virus_gtf = virus_gb[:-2]+'gtf'
+    virus_annotations = []
     for fea in virus_seq.features:
         if fea.type != 'CDS':
             continue
@@ -39,7 +35,7 @@ def main(
 
         # Gene
         fields = [
-                str(v_chrom),
+                '1',
                 'genbank',
                 'gene',
                 str(fea.location.start),
@@ -49,11 +45,11 @@ def main(
                 '0',
                 'gene_id "{:}"'.format(gene_id),
                 ]
-        virus_gtf.append('\t'.join(fields))
+        virus_annotations.append('\t'.join(fields))
 
         # Transcript
         fields = [
-                str(v_chrom),
+                '1',
                 'genbank',
                 'transcript',
                 str(fea.location.start),
@@ -63,12 +59,12 @@ def main(
                 '0',
                 'gene_id "{:}"'.format(gene_id),
                 ]
-        virus_gtf.append('\t'.join(fields))
+        virus_annotations.append('\t'.join(fields))
 
         # Exons
         for loc in fea.location.parts:
             fields = [
-                    str(v_chrom),
+                    '1',
                     'genbank',
                     'exon',
                     str(loc.start),
@@ -78,14 +74,14 @@ def main(
                     '0',
                     'gene_id "{:}"'.format(gene_id),
                     ]
-            virus_gtf.append('\t'.join(fields))
+            virus_annotations.append('\t'.join(fields))
 
-    with open(transcriptome_gtf, 'at') as f:
-        for line in virus_gtf:
+    with open(virus_gtf, 'wt') as f:
+        for line in virus_annotations:
             f.write(line+'\n')
 
-    # Rehash
-    # NOTE: this requires some computing power (8 cores recommended, 32GB RAM)
+    print('Compute combined hash')
+    print('NOTE: this requires some computing power (8 cores recommended, 32GB RAM)')
     pardir = os.path.dirname(fdn_output.rstrip('/'))
     basename = os.path.basename(fdn_output.rstrip('/'))
     os.chdir(pardir)
@@ -95,9 +91,13 @@ def main(
         '--genome={:}'.format(basename),
         '--fasta={:}'.format(genome_fasta),
         '--genes={:}'.format(transcriptome_gtf),
+        '--genome={:}'.format('mCMV'),
+        '--fasta={:}'.format(virus_fasta),
+        '--genes={:}'.format(virus_gtf),
         ]),
         shell=True,
-        check=True)
+        check=True,
+        )
 
 
 if __name__ == '__main__':
