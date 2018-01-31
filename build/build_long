@@ -2,6 +2,9 @@
 limit=$1
 cmd=$2
 
+echo "Limit: $1"
+echo "Cmd: $2"
+
 $($cmd) &
 
 minutes=0
