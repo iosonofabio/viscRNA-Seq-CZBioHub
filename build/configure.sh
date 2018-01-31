@@ -35,7 +35,7 @@ tar -xf $tra.tar.gz
 rm -rf $tra.tar.gz
 
 echo "Make combined hashes"
-sudo /tmp/append_virus_to_transcriptome --virus-gb $HOME/assets/references/virus_genome/$vir --genome-fasta $HOME/assets/references/transcriptome/$tra/fasta/genome.fa --transcriptome-gtf $HOME/assets/references/transcriptome/$tra/genes/genes.gtf --output /assets/references/transcriptome/combined
+/tmp/append_virus_to_transcriptome --virus-gb $HOME/assets/references/virus_genome/$vir --genome-fasta $HOME/assets/references/transcriptome/$tra/fasta/genome.fa --transcriptome-gtf $HOME/assets/references/transcriptome/$tra/genes/genes.gtf --output /assets/references/transcriptome/combined
 
 echo "Remove original transcriptome"
 rm -rf /assets/references/transcriptome/$tra
