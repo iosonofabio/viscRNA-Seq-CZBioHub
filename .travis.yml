@@ -26,7 +26,7 @@ jobs:
     - stage: build_dry_image
       script: ./build/build_image --dry
     - stage: build_image
-      script: ./build/build_long 40 ./build/build_image
+      script: ./build/build_image
     - stage: test_image
       script: ./test/test_image
       deploy:
