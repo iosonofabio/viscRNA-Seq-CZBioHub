@@ -166,7 +166,7 @@ class Builder:
                         out = sp.run(' '.join([
                             'aws', 'ec2',
                             'describe-images',
-                            '--image-ids', '"{:}"'.format(ami_id),
+                            '--image-ids', '"{:}"'.format(ami_record['id']),
                             ]),
                             shell=True,
                             chek=True)
