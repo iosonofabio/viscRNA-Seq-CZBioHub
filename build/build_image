@@ -37,8 +37,11 @@ class Builder:
             stdout=sp.PIPE).stdout.decode()
         ami_records = json.loads(out)
         # Reformat tags as a dictionary
-        for rec in ami_records:
-            rec['Tags'] = {d['Key']: d['Value'] for d in rec['Tags']}
+        for rec in ami_records['Images']:
+            if 'Tags' not in rec:
+                rec['Tags'] = {}
+            else:
+                rec['Tags'] = {d['Key']: d['Value'] for d in rec['Tags']}
         return ami_records
 
     def find_ebs_from_description(self, substring):
