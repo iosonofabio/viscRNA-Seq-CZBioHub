@@ -28,10 +28,11 @@ class Builder:
                check=True)
 
     def get_ami_records(self):
-        out = sp.run([
+        out = sp.run(' '.join([
             'aws', 'ec2', 'describe-images',
             '--filters', '"Name=tag:Project,Values=viscRNA-Seq"',
-            ],
+            ]),
+            shell=True,
             check=True,
             stdout=sp.PIPE).stdout.decode()
         ami_records = json.loads(out)
