@@ -161,6 +161,18 @@ class Builder:
                     if line.startswith('build/'):
                         break
                 else:
+                    # Check that AMI is really on AWS
+                    try:
+                        out = sp.run(' '.join([
+                            'aws', 'ec2',
+                            'describe-images',
+                            '--image-ids', '"{:}"'.format(ami_id),
+                            ]),
+                            shell=True,
+                            chek=True)
+                    except sp.CalledProcessError:
+                        continue
+
                     return ami_record['id']
 
         return None
@@ -173,6 +185,7 @@ class Builder:
                 ami_record['git-commits'].append(git_commit)
                 if dry:
                     print('Dry: upload updated AMI records')
+                    return
                 else:
                     return self.set_ami_records(ami_records)
 
@@ -284,5 +297,5 @@ if __name__ == '__main__':
         print('New AMI built: {:}'.format(ami_id))
 
     else:
-        print('No rebuild necessary, piggyback git commit')
+        print('Compatible AMI found: {:}'.format(ami_id))
         builder.append_commit(ami_id, dry=args.dry)
