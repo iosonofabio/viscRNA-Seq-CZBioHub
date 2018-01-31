@@ -1,37 +1,7 @@
 #!/usr/bin/env python
 '''
 Build an Amazon Machine Image (AMI) with the latest software using packer.
-
-When the image is built, we need to log it into a file to avoid polluting CZB's
-Amazon space with undead EBS snapshots. We make two copies of that, just in case.
-
-The first location is on:
-
-s3://viscrna-seq/development/CI/log_AMIs.json
-
-The backup copy is in
-
-s3://fzanini-bucket/viscrna-seq-backup/log_AMIs.json
-
-The format of the JSON file is the following:
-
-
-{
-  'AMIs':
-    [{
-      'id': 'dsalkjalsa',
-      'timestamp': 2138021983021,
-      'git-commits': ['dadsaf332ad'],
-    },
-    {
-     ...
-    }],
-}
-
-
-Of course this is redundant at the moment, but better safe than sorry.
 '''
-#TODO: add the backup bucket
 import os
 import sys
 import json
@@ -58,36 +28,17 @@ class Builder:
                check=True)
 
     def get_ami_records(self):
-        sp.run(['aws', 's3', 'cp',
-                's3://viscrna-seq/development/CI/log_AMIs.json',
-                'log_AMIs.json'],
-               check=True)
-        try:
-            with open('log_AMIs.json', 'rt') as f:
-                ami_records = json.load(f)
-        finally:
-            os.remove('log_AMIs.json')
+        out = sp.run([
+            'aws', 'ec2', 'describe-images',
+            '--filters', '"Name=tag:Project,Values=viscRNA-Seq"',
+            ],
+            check=True,
+            stdout=sp.PIPE).stdout.decode()
+        ami_records = json.loads(out)
+        # Reformat tags as a dictionary
+        for rec in ami_records:
+            rec['Tags'] = {d['Key']: d['Value'] for d in rec['Tags']}
         return ami_records
-
-    def set_ami_records(self, ami_records):
-        try:
-            with open('log_AMIs.json', 'wt') as f:
-                json.dump(ami_records, f)
-            sp.run(['aws', 's3', 'rm',
-                    's3://viscrna-seq/development/CI/log_AMIs.json'],
-                   check=True,
-                   )
-            sp.run(['aws', 's3', 'cp',
-                    'log_AMIs.json',
-                    's3://viscrna-seq/development/CI/log_AMIs.json'],
-                   check=True)
-        finally:
-            os.remove('log_AMIs.json')
-
-    def append_ami_to_records(self, ami_record):
-        records = self.get_ami_records()
-        records['AMIs'].append(ami_record)
-        self.set_ami_records(records)
 
     def find_ebs_from_description(self, substring):
         out = sp.run(
@@ -148,33 +99,22 @@ class Builder:
         # If there is any AMI with ANY commit that has no diff in the
         # build folder, it's our lucky day
         ami_records = self.get_ami_records()
-        for ami_record in ami_records['AMIs'][::-1]:
-            for git_commit_ami in ami_record['git-commits'][::-1]:
-                out = sp.run(
-                    'git diff --name-only {:} {:}'.format(
-                        git_commit_ami,
-                        git_commit),
-                    shell=True,
-                    stdout=sp.PIPE,
-                    ).stdout.decode().split('\n')
-                for line in out:
-                    if line.startswith('build/'):
-                        break
-                else:
-                    return ami_record['id']
+        for ami_record in ami_records['Images'][::-1]:
+            git_commit_ami = ami_record['Tags']['GitCommit']
+            out = sp.run(
+                'git diff --name-only {:} {:}'.format(
+                    git_commit_ami,
+                    git_commit),
+                shell=True,
+                stdout=sp.PIPE,
+                ).stdout.decode().split('\n')
+            for line in out:
+                if line.startswith('build/'):
+                    break
+            else:
+                return ami_record['ImageId']
 
         return None
-
-    def append_commit(self, ami_id, dry=False):
-        git_commit = self.get_git_commit()
-        ami_records = self.get_ami_records()
-        for ami_record in ami_records['AMIs'][::-1]:
-            if ami_record['id'] == ami_id:
-                ami_record['git-commits'].append(git_commit)
-                if dry:
-                    print('Dry: upload updated AMI records')
-                else:
-                    return self.set_ami_records(ami_records)
 
         raise ValueError('AMI record not found!')
 
@@ -239,21 +179,6 @@ class Builder:
             if found:
                 self.detach_ebs(ebs_id)
             print('Volume detached')
-            return
-
-        # If the AMI does not make it into the records for ANY reasons,
-        # we better make triple sure we kill it
-        try:
-            timestamp = str(time.time())
-            git_commit = self.get_git_commit()
-            self.append_ami_to_records({
-                'id': ami_id,
-                'timestamp': timestamp,
-                'git-commits': [git_commit],
-                })
-        except:
-            self.deregister_ami(ami_id)
-            raise
 
 
 if __name__ == '__main__':
@@ -284,5 +209,4 @@ if __name__ == '__main__':
         print('New AMI built: {:}'.format(ami_id))
 
     else:
-        print('No rebuild necessary, piggyback git commit')
-        builder.append_commit(ami_id, dry=args.dry)
+        print('No rebuild necessary, compatible AMI: {:}'.format(ami_id))

@@ -22,4 +22,4 @@ jobs:
     - stage: build_dry_image
       script: ./build/build_image --dry
     - stage: build_image
-      script: travis_wait 40 ./build/build_image
+      script: ./build/build_image
