@@ -13,6 +13,7 @@ The datast records have the following format:
 }
 '''
 import os
+import stat
 import sys
 import json
 import time
@@ -112,6 +113,10 @@ class Tester:
                             ami_id))
                     else:
                         fout.write(line)
+
+        # chmod u+x transpiled file
+        st = os.stat(fn_out)
+        os.chmod(fn_out, st.st_mode | stat.S_IEXEC)
 
     def test_ami(self):
         dataset_record = self.get_test_dataset_record()
