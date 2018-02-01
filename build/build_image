@@ -142,23 +142,19 @@ class Builder:
             return
 
         try:
-            proc = sp.run(' '.join([
+            out = sp.run(' '.join([
                 self.packer,
                 '-machine-readable',
                 'build',
                 'build/viscrna-seq.json',
-                '|',
-                'tee',
-                'packer.log',
                 ]),
                 shell=True,
                 check=True,
                 env=env,
-                )
+                stdout=sp.PIPE,
+                ).stdout.decode()
 
-            # Check the presence of artifacts
-            with open('packer.log', 'rt') as f:
-                out = f.read()
+            print('Check the presence of artifacts')
             if 'no artifacts were created' in out:
                 raise RuntimeError('packer could not build artifacts')
 
