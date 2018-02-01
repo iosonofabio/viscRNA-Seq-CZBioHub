@@ -60,7 +60,7 @@ class Runner:
                 '--tag-specifications',
                 '"ResourceType=instance,Tags=[{:}]"'.format(tags),
                 '"ResourceType=volume,Tags=[{:}]"'.format(tags),
-                '--user-data', remote_cmd,
+                '--user-data', '"'+remote_cmd+'"',
                 ]),
                 shell=True,
                 check=True,
@@ -78,6 +78,34 @@ class Runner:
         self.instance_id = instance_id
         print('EC2 instance id: {:}, {:}'.format(instance_id, instance_state))
         return instance_id
+
+    def monitor_pipeline(self, timeout=40):
+        t0 = time.time()
+        t = time.time()
+        while ((t - t0) // 60) < timeout:
+            try:
+                out = sp.run(' '.join([
+                    'aws', 'ec2', 'describe-instances',
+                    '--instance-ids', self.instance_id,
+                    ]),
+                    check=True,
+                    shell=True).stdout.decode()
+            except sp.CalledProcessError as e:
+                print(e.stdout.decode())
+                self.terminate_instance(self.instance_id)
+                raise
+
+            outd = json.loads(out)
+            if ('Instances' not in outd) or (len(outd['Instances']) == 0):
+                self.terminate_instance(self.instance_id)
+                raise ValueError('No instances launched!')
+
+            instance_state = outd['Instances'][0]['State']['Name']
+            print('Job state: {:}'.format(instance_state))
+
+            t = time.time()
+
+        self.terminate_instance(self.instance_id)
 
     def terminate_instance(self, instance_id):
         sp.run(' '.join([
@@ -112,6 +140,9 @@ if __name__ == '__main__':
     par.add_argument(
             '--id', required=True,
             help='Sets a unique ID for the dataset, for record keeping')
+    par.add_argument(
+            '--monitor', action='store_true',
+            help='Keep monitoring the pipeline after start')
 
     pas = spas.add_parser('stop')
     pas.add_argument(
@@ -130,6 +161,8 @@ if __name__ == '__main__':
                 output_gdrive_path=args.output_gdrive,
                 dataset_id=args.id,
                 )
+        if args.monitor:
+            run.monitor_pipeline()
 
     else:
         run.terminate_instance(args.instance_id)
