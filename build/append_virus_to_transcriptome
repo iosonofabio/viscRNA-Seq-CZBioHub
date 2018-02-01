@@ -90,14 +90,13 @@ def main(
             f.write(line+'\n')
 
     pardir = os.path.dirname(fdn_output.rstrip('/'))
-    basename = os.path.basename(fdn_output.rstrip('/'))
-    print('Compute combined hash for {:} and mCMV'.format(basename))
+    print('Compute combined hash for mouse and mCMV')
     print('NOTE: this requires some computing power (8 cores recommended, 32GB RAM)')
     os.chdir(pardir)
     sp.run(' '.join([
         'cellranger',
         'mkref',
-        '--genome={:}'.format(basename),
+        '--genome={:}'.format('mouse'),
         '--fasta={:}'.format(genome_fasta),
         '--genes={:}'.format(transcriptome_gtf),
         '--genome={:}'.format('mCMV'),
