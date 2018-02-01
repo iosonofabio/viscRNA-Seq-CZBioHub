@@ -51,7 +51,7 @@ class Runner:
             '--id', dataset_id,
             ])
         try:
-            out = sp.call(' '.join([
+            out = sp.run(' '.join([
                 'aws', 'ec2', 'run-instances',
                 '--image-id', AMI_ID,
                 '--count', '1',
@@ -80,7 +80,7 @@ class Runner:
         return instance_id
 
     def terminate_instance(self, instance_id):
-        sp.call(' '.join([
+        sp.run(' '.join([
             'aws', 'ec2',
             'terminate-instances',
             '--instance-ids', instance_id,
