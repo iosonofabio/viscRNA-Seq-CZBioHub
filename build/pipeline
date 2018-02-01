@@ -55,12 +55,14 @@ class Pipeline:
     def __call__(self):
         print('RUN PIPELINE')
         print('Make fastq')
+        os.makedirs('/data/fastq')
         sp.run(' '.join([
             'cellranger',
             'mkfastq'
             '--id', self.dataset_id,
             '--run', self.input_data_path_unpacked,
             '--samplesheet', self.input_samplesheet,
+            '--output-dir=/data/fastq',
             ]),
             shell=True,
             check=True)
@@ -70,18 +72,32 @@ class Pipeline:
             'cellranger',
             'count'
             '--id='+self.dataset_id,
-            '--transcriptome=/assets/references/combined/transcriptome',
-            '--fastqs='+self.dataset_id,
+            '--transcriptome=/assets/references/mouse_and_mCMV',
+            '--fastqs=/data/fastq',
             '--sample='+self.dataset_id,
             '--expect-cells=5000',
             ]),
             shell=True,
             check=True)
+        # NOTE: output goes in a subfolder of the cwd called like the sample:
+        # $HOME/<self.dataset_id>/outs/possorted_genome_bam.bam
+        # $HOME/<self.dataset_id>/outs/filtered_gene_bc_matrices_h5.h5
+        # see: https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/output/overview
 
-        print('Transfer reads')
-        # TODO
+        print('Transfer output to S3')
+        sp.run(' '.join([
+            'aws', 's3', 'cp',
+            '{:}/{:}'.format(
+                os.getenv('HOME'),
+                self.dataset_id),
+            's3://viscrna-seq/data/{:}/'.format(
+                self.dataset_id),
+            '--recursive',
+            ]),
+            check=True,
+            shell=True)
 
-        print('Transfer count table')
+        print('Transfer count table to GDrive')
         # TODO
 
         print('Done')
