@@ -102,14 +102,14 @@ class Tester:
         with open(fn_in, 'rt') as fin:
             with open(fn_out, 'wt') as fout:
                 for line in fin:
-                    if line.startswith('VISCRNASEQ_GIT_COMMIT = '):
-                        fout.write('VISCRNASEQ_GIT_COMMIT = {:}\n'.format(
+                    if line.startswith('GIT_COMMIT = '):
+                        fout.write('GIT_COMMIT = {:}\n'.format(
                             git_commit))
-                    elif line.startswith('VISCRNASEQ_GIT_BRANCH = '):
-                        fout.write('VISCRNASEQ_GIT_BRANCH = {:}\n'.format(
+                    elif line.startswith('GIT_BRANCH = '):
+                        fout.write('GIT_BRANCH = {:}\n'.format(
                             git_branch))
-                    if line.startswith('VISCRNASEQ_AMI_ID = '):
-                        fout.write('VISCRNASEQ_AMI_ID = {:}\n'.format(
+                    if line.startswith('AMI_ID = '):
+                        fout.write('AMI_ID = {:}\n'.format(
                             ami_id))
                     else:
                         fout.write(line)

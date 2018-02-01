@@ -29,6 +29,13 @@ GIT_COMMIT = ''
 
 
 class Runner:
+    def broadcast_identity(self):
+        print('viscRNA-Seq pipeline script: branch {:}, version {:}, AMI {:}'.format(
+            GIT_BRANCH,
+            GIT_COMMIT,
+            AMI_ID,
+            ))
+
     def launch_instance(
             self,
             input_data_path,
@@ -152,6 +159,7 @@ if __name__ == '__main__':
     args = pa.parse_args()
 
     run = Runner()
+    run.broadcast_identity()
 
     if args.subparser_name == 'run':
         instance_id = run.launch_instance(
