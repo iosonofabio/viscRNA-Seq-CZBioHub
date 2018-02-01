@@ -155,7 +155,7 @@ class Builder:
                     stdout=sp.PIPE
                     ).stdout.decode()
             except sp.CalledProcessError as e:
-                print(e.stdout)
+                print(e.stdout.decode())
                 raise
 
             print('Check the presence of artifacts')
