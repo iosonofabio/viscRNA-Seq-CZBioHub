@@ -40,7 +40,7 @@ class Runner:
         tags = ','.join([
             '{Key=Name,Value=viscRNA-Seq-pipeline}',
             '{Key=Project,Value=viscRNA-Seq}',
-            '{Key=datasetId,Value={:}}'.format(dataset_id),
+            '{{Key=datasetId,Value={:}}}'.format(dataset_id),
             ])
         remote_cmd = ' '.join([
             '/usr/local/bin/pipeline',
