@@ -37,7 +37,7 @@ echo "Copy combined transcriptome from S3"
 aws s3 cp s3://viscrna-seq/assets/references/reference_mouse_and_mCMV.tar.gz /assets/references/
 echo "Extracting combined transcriptome"
 mv /assets/references/reference_mouse_and_mCMV.tar.gz /assets/references/mouse_and_mCMV.tar.gz
-tar -xf /assets/reference/mouse_and_mCMV.tar.gz -C /assets/reference/
+tar -xf /assets/references/mouse_and_mCMV.tar.gz -C /assets/references/
 echo "Removing tar.gz"
 rm -rf /assets/reference/mouse_and_mCMV.tar.gz
 echo "Combined transcriptome hashed"
