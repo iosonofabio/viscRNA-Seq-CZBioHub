@@ -21,6 +21,9 @@ def main(
 
     print('Save virus FASTA')
     virus_fasta = virus_gb[:-2]+'fasta'
+    # Sequence name must be chromosome number
+    virus_seq.id = '1'
+    virus_seq.name = '1'
     SeqIO.write(virus_seq, virus_fasta, 'fasta')
 
     print('Save virus GTF')
@@ -57,7 +60,10 @@ def main(
                 '1',
                 strand,
                 '0',
-                'gene_id "{:}"'.format(gene_id),
+                'gene_id "{:}"; transcript_id "{:}"'.format(
+                    gene_id,
+                    'tr'+gene_id,
+                    ),
                 ]
         virus_annotations.append('\t'.join(fields))
 
@@ -72,7 +78,10 @@ def main(
                     '1',
                     strand,
                     '0',
-                    'gene_id "{:}"'.format(gene_id),
+                    'gene_id "{:}"; transcript_id "{:}"'.format(
+                        gene_id,
+                        'tr'+gene_id,
+                        ),
                     ]
             virus_annotations.append('\t'.join(fields))
 
@@ -80,10 +89,10 @@ def main(
         for line in virus_annotations:
             f.write(line+'\n')
 
-    print('Compute combined hash')
-    print('NOTE: this requires some computing power (8 cores recommended, 32GB RAM)')
     pardir = os.path.dirname(fdn_output.rstrip('/'))
     basename = os.path.basename(fdn_output.rstrip('/'))
+    print('Compute combined hash for {:} and mCMV'.format(basename))
+    print('NOTE: this requires some computing power (8 cores recommended, 32GB RAM)')
     os.chdir(pardir)
     sp.run(' '.join([
         'cellranger',
