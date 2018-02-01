@@ -29,12 +29,38 @@ GIT_COMMIT = ''
 
 
 class Runner:
-    def launch_instance(self):
-        #TODO
-        ... AMI_ID...
+    def launch_instance(self, dataset_id):
+        tags = ','.join([
+            '{Key=Name,Value=viscRNA-Seq-pipeline}',
+            '{Key=Project,Value=viscRNA-Seq}',
+            '{Key=datasetId,Value={:}}'.format(dataset_id),
+            ])
+        try:
+            out = sp.call(' '.join([
+                'aws', 'ec2', 'run-instances',
+                '--image-id', AMI_ID,
+                '--count', '1',
+                '--instance-type', 't2.micro',
+                '--instance-initiated-shutdown-behavior', 'terminate',
+                '--tag-specifications',
+                '"ResourceType=instance,Tags=[{:}]"'.format(tags),
+                '"ResourceType=volume,Tags=[{:}]"'.format(tags),
+                ]),
+                shell=True,
+                check=True,
+                stdout=sp.PIPE).stdout.decode()
+        except sp.CalledProcessError as e:
+            print(e.stdout)
+            raise
+
+        outd = json.loads(out)
+        if ('Instances' not in outd) or (len(outd['Instances']) == 0):
+            raise ValueError('No instances launched!')
+        instance_id = outd['Instances'][0]['InstanceId']
+        instance_state = outd['Instances'][0]['State']['Name']
 
         self.instance_id = instance_id
-        print('EC2 instance id: {:}'.format(instance_id))
+        print('EC2 instance id: {:}, {:}'.format(instance_id, instance_state))
         return instance_id
 
     def terminate_instance(self, instance_id):
@@ -110,7 +136,8 @@ if __name__ == '__main__':
     run = Runner()
     #TODO
     if ...
-        instance_id = run.launch_instance()
+        instance_id = run.launch_instance(
+                dataset_id=args.id)
         run.run_pipeline(
                 input_data_path=args.input_data,
                 input_samplesheet_path=args.input_samplesheet,
