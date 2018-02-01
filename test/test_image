@@ -38,33 +38,55 @@ class Tester:
                 }
 
     def get_git_commit(self):
-        git_commit = sp.run(
-                'git rev-parse HEAD',
-                shell=True,
-                check=True,
-                stdout=sp.PIPE).stdout.decode().rstrip('\n')
+        git_commit = os.getenv('TRAVIS_COMMIT')
+        if git_commit is None:
+            git_commit = sp.run(
+                    'git rev-parse HEAD',
+                    shell=True,
+                    check=True,
+                    stdout=sp.PIPE).stdout.decode().rstrip('\n')
         return git_commit
+
+    def get_ami_records(self):
+        out = sp.run(' '.join([
+            'aws', 'ec2', 'describe-images',
+            '--filters',
+            '"Name=tag:Project,Values=viscRNA-Seq"',
+            '"Name=state,Values=available"',
+            ]),
+            shell=True,
+            check=True,
+            stdout=sp.PIPE).stdout.decode()
+        ami_records = json.loads(out)
+
+        # Reformat tags as a dictionary
+        for rec in ami_records['Images']:
+            if 'Tags' not in rec:
+                rec['Tags'] = {}
+            else:
+                rec['Tags'] = {d['Key']: d['Value'] for d in rec['Tags']}
+        return ami_records
 
     def get_compatible_ami(self):
         git_commit = self.get_git_commit()
 
-        # If there is any AMI with ANY commit that has no diff in the
-        # build folder, it's our lucky day
+        # If there is an AMI from a commit that has no diff in /build, recycle
         ami_records = self.get_ami_records()
-        for ami_record in ami_records['AMIs'][::-1]:
-            for git_commit_ami in ami_record['git-commits'][::-1]:
-                out = sp.run(
-                    'git diff --name-only {:} {:}'.format(
-                        git_commit_ami,
-                        git_commit),
-                    shell=True,
-                    stdout=sp.PIPE,
-                    ).stdout.encode().split('\n')
-                for line in out:
-                    if line.startswith('build/'):
-                        break
-                else:
-                    return ami_record['id']
+        for ami_record in ami_records['Images']:
+            git_commit_ami = ami_record['Tags']['GitCommit']
+            out = sp.run(
+                'git diff --name-only {:} {:}'.format(
+                    git_commit_ami,
+                    git_commit),
+                shell=True,
+                check=True,
+                stdout=sp.PIPE,
+                ).stdout.decode().split('\n')
+            for line in out:
+                if line.startswith('build/'):
+                    break
+            else:
+                return ami_record['ImageId']
 
         return None
 
