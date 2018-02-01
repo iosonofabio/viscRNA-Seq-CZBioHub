@@ -41,10 +41,5 @@ echo "Removing tar.gz"
 rm -rf /assets/reference/mouse_and_mCMV.tar.gz
 echo "Combined transcriptome hashed"
 
-echo "Set up pipeline script server side"
-sudo mkdir /data
-sudo chmod a+rwX /data
-sudo mv /tmp/pipeline /usr/local/bin/
-
 echo "DONE"
 exit 0
