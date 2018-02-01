@@ -18,7 +18,7 @@ conda update -q conda
 echo "Install biopython"
 conda install -c bioconda biopython
 
-echo "Compute combined transcriptome hashes"
+echo "Combined transcriptome hashes"
 vir="NC_004065_1.gb"
 tra="refdata-cellranger-mm10-1.2.0"
 
@@ -36,7 +36,7 @@ rm -rf /assets/references/{mouse,human}
 echo "Copy combined transcriptome from S3"
 aws s3 cp s3://viscrna-seq/assets/references/reference_mouse_and_mCMV.tar.gz /assets/references/mouse_and_mCMV.tar.gz
 echo "Extracting combined transcriptome"
-tar -xz /assets/reference/mouse_and_mCMV.tar.gz -C /assets/reference/
+tar -xf /assets/reference/mouse_and_mCMV.tar.gz -C /assets/reference/
 echo "Removing tar.gz"
 rm -rf /assets/reference/mouse_and_mCMV.tar.gz
 echo "Combined transcriptome hashed"
