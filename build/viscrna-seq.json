@@ -7,7 +7,7 @@
     "aws_security_group_id": "",
     "aws_region": "us-west-2",
     "aws_instance_type": "m4.2xlarge",
-    "aws_source_ami": "ami-74d2690c",
+    "aws_source_ami": "ami-29902b51",
     "aws_virtualization_type": "pv",
     "travis_branch": "{{env `TRAVIS_BRANCH`}}",
     "travis_commit": "{{env `TRAVIS_COMMIT`}}",
@@ -63,18 +63,8 @@
   "provisioners": [
     {
       "type": "file",
-      "source": "assets/mCMV/NC_004065_1.gb",
-      "destination": "/tmp/NC_004065_1.gb"
-    },
-    {
-      "type": "file",
       "source": "build/pipeline",
       "destination": "/tmp/pipeline"
-    },
-    {
-      "type": "file",
-      "source": "build/append_virus_to_transcriptome",
-      "destination": "/tmp/append_virus_to_transcriptome"
     },
     {
       "type": "shell",
