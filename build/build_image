@@ -142,17 +142,21 @@ class Builder:
             return
 
         try:
-            out = sp.run(' '.join([
-                self.packer,
-                '-machine-readable',
-                'build',
-                'build/viscrna-seq.json',
-                ]),
-                shell=True,
-                check=True,
-                env=env,
-                stdout=sp.PIPE
-                ).stdout.decode()
+            try:
+                out = sp.run(' '.join([
+                    self.packer,
+                    '-machine-readable',
+                    'build',
+                    'build/viscrna-seq.json',
+                    ]),
+                    shell=True,
+                    check=True,
+                    env=env,
+                    stdout=sp.PIPE
+                    ).stdout.decode()
+            except sp.CalledProcessError as e:
+                print(e.stdout)
+                raise
 
             print('Check the presence of artifacts')
             if 'no artifacts were created' in out:
