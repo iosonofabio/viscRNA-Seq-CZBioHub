@@ -34,8 +34,12 @@
       "ami_description": "viscRNA-Seq deployment built with Packer.io",
 
       "tags": {
-        "Release": "{{user `travis_branch`}}_{{user `travis_commit`}}",
-        "Name": "viscRNA-Seq {{user `travis_branch`}} {{user `travis_commit`}} [{{timestamp}}]"
+        "Name": "viscRNA-Seq {{user `travis_branch`}} {{user `travis_commit`}} [{{isotime \"2006-01-02\" | clean_ami_name}}]",
+	"GitCommit": "{{user `travis_commit`}}",
+	"GitBranch": "{{user `travis_branch`}}",
+	"Timestamp": "{{timestamp}}",
+	"Date": "{{isotime \"2006-01-02\"}}",
+	"Project": "viscRNA-Seq"
       },
 
       "run_tags": {
