@@ -95,11 +95,12 @@ if __name__ == '__main__':
     # FIXME: more specific help for the locations
     pa = argparse.ArgumentParser(description='''viscRNA-Seq pipeline''')
     spas = pa.add_subparsers(dest='subparser_name')
+
     par = spas.add_parser('run')
-    pa.add_argument(
+    par.add_argument(
             '--input-data', required=True,
             help='The location of the raw reads')
-    pa.add_argument(
+    par.add_argument(
             '--input-samplesheet', required=True,
             help='The location of the samplesheet')
     par.add_argument(
@@ -114,7 +115,7 @@ if __name__ == '__main__':
 
     pas = spas.add_parser('stop')
     pas.add_argument(
-            'instance-id',
+            '--instance-id', required=True,
             help='The id of the EC2 instance to stop')
 
     args = pa.parse_args()
