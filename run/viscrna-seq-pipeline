@@ -29,11 +29,26 @@ GIT_COMMIT = ''
 
 
 class Runner:
-    def launch_instance(self, dataset_id):
+    def launch_instance(
+            self,
+            input_data_path,
+            input_samplesheet_path,
+            output_path,
+            output_gdrive_path,
+            dataset_id,
+            ):
         tags = ','.join([
             '{Key=Name,Value=viscRNA-Seq-pipeline}',
             '{Key=Project,Value=viscRNA-Seq}',
             '{Key=datasetId,Value={:}}'.format(dataset_id),
+            ])
+        remote_cmd = ' '.join([
+            '/usr/local/bin/pipeline',
+            '--input-data', input_data_path,
+            '--input-samplesheet', input_samplesheet_path,
+            '--output', output_path,
+            '--output-gdrive', output_gdrive_path,
+            '--id', dataset_id,
             ])
         try:
             out = sp.call(' '.join([
@@ -45,6 +60,7 @@ class Runner:
                 '--tag-specifications',
                 '"ResourceType=instance,Tags=[{:}]"'.format(tags),
                 '"ResourceType=volume,Tags=[{:}]"'.format(tags),
+                '--user-data', remote_cmd,
                 ]),
                 shell=True,
                 check=True,
@@ -66,49 +82,19 @@ class Runner:
     def terminate_instance(self, instance_id):
         sp.call(' '.join([
             'aws', 'ec2',
-            #FIXME FIXME
-            ... self.instance_id ... 
-            '/usr/local/bin/pipeline',
-            '--input-data', input_data_path,
-            '--input-samplesheet', input_samplesheet_path,
-            '--output', output_path,
-            '--output-gdrive', output_gdrive_path,
-            '--id', dataset_id,
+            'terminate-instances',
+            '--instance-ids', instance_id,
             ]),
             shell=True,
             check=True,
         )
-
-    def run_pipeline(
-            self,
-            input_path,
-            output_path,
-            output_gdrive_path,
-            dataset_id,
-            ):
-
-        sp.call(' '.join([
-            'aws', 'ec2',
-            #FIXME FIXME
-            ... self.instance_id ... 
-            '/usr/bin/pipeline',
-            '--input-data', input_data_path,
-            '--input-samplesheet', input_samplesheet_path,
-            '--output', output_path,
-            '--output-gdrive', output_gdrive_path,
-            '--id', dataset_id,
-            ]),
-            shell=True,
-            check=True,
-        )
-
 
 
 if __name__ == '__main__':
 
     # FIXME: more specific help for the locations
     pa = argparse.ArgumentParser(description='''viscRNA-Seq pipeline''')
-    spas = pa.add_subparsers()
+    spas = pa.add_subparsers(dest='subparser_name')
     par = spas.add_parser('run')
     pa.add_argument(
             '--input-data', required=True,
@@ -131,14 +117,12 @@ if __name__ == '__main__':
             'instance-id',
             help='The id of the EC2 instance to stop')
 
-    pa.parse_args()
+    args = pa.parse_args()
 
     run = Runner()
-    #TODO
-    if ...
+
+    if args.subparser_name == 'run':
         instance_id = run.launch_instance(
-                dataset_id=args.id)
-        run.run_pipeline(
                 input_data_path=args.input_data,
                 input_samplesheet_path=args.input_samplesheet,
                 output_path=args.output,
