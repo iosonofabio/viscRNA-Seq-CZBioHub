@@ -103,13 +103,13 @@ class Tester:
             with open(fn_out, 'wt') as fout:
                 for line in fin:
                     if line.startswith('GIT_COMMIT = '):
-                        fout.write('GIT_COMMIT = {:}\n'.format(
+                        fout.write('GIT_COMMIT = "{:}"\n'.format(
                             git_commit))
                     elif line.startswith('GIT_BRANCH = '):
-                        fout.write('GIT_BRANCH = {:}\n'.format(
+                        fout.write('GIT_BRANCH = "{:}"\n'.format(
                             git_branch))
                     if line.startswith('AMI_ID = '):
-                        fout.write('AMI_ID = {:}\n'.format(
+                        fout.write('AMI_ID = "{:}"\n'.format(
                             ami_id))
                     else:
                         fout.write(line)
