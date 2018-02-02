@@ -128,6 +128,7 @@ class Tester:
             '--output', 'none',
             '--output-gdrive', 'none',
             '--id', dataset_record['id'],
+            '--monitor', '40',
             ])
         print(call)
         sp.run(
@@ -145,7 +146,7 @@ if __name__ == '__main__':
     print('TRANSPILE PIPELINE')
     tester.transpile_pipeline()
 
-    print('TEST PIPELINE ON MACA DATA')
+    print('TEST PIPELINE ON TEST DATA')
     tester.test_ami()
 
     print('Done. All good')

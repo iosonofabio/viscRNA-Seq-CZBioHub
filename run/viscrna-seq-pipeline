@@ -87,6 +87,8 @@ class Runner:
         return instance_id
 
     def monitor_pipeline(self, timeout=40):
+        console_output_buffer = []
+
         t0 = time.time()
         t = time.time()
         while ((t - t0) // 60) < timeout:
@@ -110,9 +112,40 @@ class Runner:
             instance_state = outd['Instances'][0]['State']['Name']
             print('Job state: {:}'.format(instance_state))
 
-            t = time.time()
+            # Print console output
+            try:
+                out = sp.run(' '.join([
+                    'aws', 'ec2', 'get-console-output',
+                    '--instance-id', self.instance_id,
+                    ]),
+                    check=True,
+                    shell=True).stdout.decode()
+            except sp.CalledProcessError as e:
+                print(e.stdout.decode())
+                self.terminate_instance(self.instance_id)
+                raise
 
-        self.terminate_instance(self.instance_id)
+            lines = json.loads(out)['Output'].split('\n')
+            if len(lines) > 0:
+                # Check in buffer
+                for il, line in enumerate(console_output_buffer):
+                    if line == lines[0]:
+                        n_overlap = len(console_output_buffer) - il
+                        if len(lines) <= n_overlap:
+                            lines = []
+                        else:
+                            lines = lines[n_overlap:]
+                        break
+
+                for line in lines:
+                    print(line)
+
+                console_output_buffer.extend(lines)
+
+                if len(console_output_buffer) > 50_000:
+                    console_output_buffer = console_output_buffer[-50_000:]
+
+            t = time.time()
 
     def terminate_instance(self, instance_id):
         sp.run(' '.join([
@@ -148,13 +181,21 @@ if __name__ == '__main__':
             '--id', required=True,
             help='Sets a unique ID for the dataset, for record keeping')
     par.add_argument(
-            '--monitor', action='store_true',
-            help='Keep monitoring the pipeline after start')
+            '--monitor', type=int, default=None,
+            help='Monitoring the pipeline after launch for X minutes (0 means forever)')
 
-    pas = spas.add_parser('stop')
+    pam = spas.add_parser('monitor')
+    pam.add_argument(
+            '--instance-id', required=True,
+            help='The id of the EC2 instance')
+    pam.add_argument(
+            '--timeout', type=int, default=0,
+            help='Monitoring the pipeline after launch for X minutes (0 means forever)')
+
+    pas = spas.add_parser('terminate')
     pas.add_argument(
             '--instance-id', required=True,
-            help='The id of the EC2 instance to stop')
+            help='The id of the EC2 instance')
 
     args = pa.parse_args()
 
@@ -169,8 +210,16 @@ if __name__ == '__main__':
                 output_gdrive_path=args.output_gdrive,
                 dataset_id=args.id,
                 )
-        if args.monitor:
-            run.monitor_pipeline()
+
+        if args.monitor is not None:
+            run.monitor_pipeline(timeout=args.monitor)
+
+    elif args.subparser_name == 'monitor':
+        run.instance_id = args.instance_id
+        run.monitor_pipeline(timeout=args.timeout)
+
+    elif args.subparser_name == 'terminate':
+        run.terminate_instance(args.instance_id)
 
     else:
-        run.terminate_instance(args.instance_id)
+        raise ValueError('Subcommand not found: {:}'.format(args.subparser_name))
