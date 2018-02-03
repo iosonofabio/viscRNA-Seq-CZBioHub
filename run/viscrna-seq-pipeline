@@ -105,7 +105,12 @@ class Runner:
                 self.terminate_instance(self.instance_id)
                 raise
 
+            if out is None:
+                self.terminate_instance(self.instance_id)
+                raise ValueError('Output of describe-images is None')
+
             outd = json.loads(out.decode())
+
             if ('Instances' not in outd) or (len(outd['Instances']) == 0):
                 self.terminate_instance(self.instance_id)
                 raise ValueError('No instances launched!')
@@ -131,6 +136,10 @@ class Runner:
                     print(e.stdout.decode())
                 self.terminate_instance(self.instance_id)
                 raise
+
+            if out is None:
+                self.terminate_instance(self.instance_id)
+                raise ValueError('Output of get-console-output is None')
 
             lines = json.loads(out.decode())['Output'].split('\n')
             if len(lines) > 0:
