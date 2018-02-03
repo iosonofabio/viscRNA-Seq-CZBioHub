@@ -98,7 +98,8 @@ class Runner:
                     '--instance-ids', self.instance_id,
                     ]),
                     check=True,
-                    shell=True).stdout
+                    shell=True,
+                    stdout=sp.PIPE).stdout
             except sp.CalledProcessError as e:
                 if e.stdout is not None:
                     print(e.stdout.decode())
@@ -130,7 +131,8 @@ class Runner:
                     '--instance-id', self.instance_id,
                     ]),
                     check=True,
-                    shell=True).stdout
+                    shell=True,
+                    stdout=sp.PIPE).stdout
             except sp.CalledProcessError as e:
                 if e.stdout is not None:
                     print(e.stdout.decode())
