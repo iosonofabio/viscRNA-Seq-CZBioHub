@@ -108,7 +108,7 @@ class Tester:
                     elif line.startswith('GIT_BRANCH = '):
                         fout.write('GIT_BRANCH = "{:}"\n'.format(
                             git_branch))
-                    if line.startswith('AMI_ID = '):
+                    elif line.startswith('AMI_ID = '):
                         fout.write('AMI_ID = "{:}"\n'.format(
                             ami_id))
                     else:

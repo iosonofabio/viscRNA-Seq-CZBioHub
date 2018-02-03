@@ -23,7 +23,7 @@ import argparse
 import subprocess as sp
 
 
-AMI_ID = ''
+AMI_ID = 'ami-0f328977'
 GIT_BRANCH = ''
 GIT_COMMIT = ''
 
@@ -231,6 +231,7 @@ if __name__ == '__main__':
                 )
 
         if args.monitor is not None:
+            time.sleep(60)
             run.monitor_pipeline(timeout=args.monitor)
 
     elif args.subparser_name == 'monitor':
