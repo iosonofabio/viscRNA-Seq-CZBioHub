@@ -36,42 +36,19 @@ class Runner:
             AMI_ID,
             ))
 
-    def generate_pem_key(
+    def get_pem_key(
             self,
             ):
 
-        try:
-            out = sp.run(' '.join([
-                'aws', 'ec2', 'create-key-pair',
-                '--key-name', 'viscrna-seq-key',
-                '--query', '"KeyMaterial"',
-                '--output', 'text',
-                ]),
-                shell=True,
-                check=True,
-                stdout=sp.PIPE).stdout
-        except sp.CalledProcessError as e:
-            print(e.stdout)
-            raise
-
-        with open('key.pem', 'wt') as f:
-            f.write(out.decode())
-
         self.pemkey = 'viscrna-seq-key'
         self.pemkey_filename = 'key.pem'
-        print('SSH key to monitor instance saved in {:}'.format(
-            self.pemkey_filename))
-        print('NOTE: user on the remote machine is: ubuntu')
 
         # Copy pem key to S3, else how are we to check what's going on?
-        import datetime
-        now = datetime.datetime.now()
-        fn = 'pemkey_'+now.isoformat().replace(':', '-')+'.pem'
-        dest = 's3://viscrna-seq/instance-keys/'+fn
+        src = 's3://viscrna-seq/assets/credentials/instance-keys/key.pem'
         try:
             sp.run(' '.join([
                 'aws', 's3', 'cp',
-                self.pemkey_filename, dest,
+                src, self.pemkey_filename,
                 ]),
                 shell=True,
                 check=True)
@@ -79,7 +56,8 @@ class Runner:
             print(e.stdout)
             raise
 
-        print('Copy of SSH key at: {:}'.format(dest))
+        print('SSH key copied from S3')
+        print('NOTE: user on the remote machine is: ubuntu')
 
     def launch_instance(
             self,
@@ -91,7 +69,7 @@ class Runner:
             ):
 
         if not hasattr(self, 'pemkey'):
-            self.generate_pem_key()
+            self.get_pem_key()
 
         tags = ','.join([
             '{Key=Name,Value=viscRNA-Seq-pipeline}',
