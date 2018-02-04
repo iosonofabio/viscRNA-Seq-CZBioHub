@@ -34,6 +34,24 @@ class Pipeline:
         else:
             raise ValueError('Type of data source not recognized: {:}'.format(path))
 
+    def unpack_data(self, path):
+        parent = os.path.dirname(path)
+        if parent == '':
+            parent = '.'
+        fn = os.path.basename(path)
+
+        if fn.endswith('.tar.gz') or fn.endswith('.tar.xz'):
+            sp.run(' '.join([
+                'tar', '-xf', path, '-C', parent,
+                ]),
+                shell=True,
+                check=True)
+        else:
+            raise ValueError('Compressed format not supported: {:}'.format(
+                fn.split('.')[-1]))
+
+        os.remove(path)
+
     def get_data_s3(self, url):
         fn = url.split('/')[-1]
         sp.run(' '.join([
@@ -54,15 +72,27 @@ class Pipeline:
 
     def __call__(self):
         print('RUN PIPELINE')
+        print('Get data')
+        self.get_data(self.input_data_path)
+        self.input_data_path = os.path.basename(self.input_data_path)
+
+        print('Unpack data')
+        self.unpack_data(self.input_data_path)
+        self.input_data_path = '.'.join(self.input_data_path.split('.')[:-2])
+
+        print('Get samplesheet')
+        self.get_data(self.input_samplesheet_path)
+        self.input_samplesheet_path = os.path.basename(self.input_samplesheet_path)
+
         print('Make fastq')
-        os.makedirs('/data/fastq')
+        os.makedirs('/data/fastq', exist_ok=True)
         sp.run(' '.join([
             'cellranger',
-            'mkfastq'
-            '--id', self.dataset_id,
-            '--run', self.input_data_path_unpacked,
-            '--samplesheet', self.input_samplesheet,
-            '--output-dir=/data/fastq',
+            'mkfastq',
+            '--id={:}'.format(self.dataset_id),
+            '--run={:}'.format(self.input_data_path),
+            '--samplesheet={:}'.format(self.input_samplesheet_path),
+            '--output-dir=/data/fastq'.format(self.dataset_id),
             ]),
             shell=True,
             check=True)

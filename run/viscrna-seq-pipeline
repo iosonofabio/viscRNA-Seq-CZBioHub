@@ -23,7 +23,7 @@ import argparse
 import subprocess as sp
 
 
-AMI_ID = 'ami-0f328977'
+AMI_ID = 'ami-1bd75263'
 GIT_BRANCH = ''
 GIT_COMMIT = ''
 
@@ -43,7 +43,7 @@ class Runner:
         self.pemkey = 'viscrna-seq-key'
         self.pemkey_filename = 'key.pem'
 
-        # Copy pem key to S3, else how are we to check what's going on?
+        print('Copy SSH key from S3')
         src = 's3://viscrna-seq/assets/credentials/instance-keys/mCMV_10X.pem'
         try:
             sp.run(' '.join([
@@ -56,10 +56,45 @@ class Runner:
             print(e.stdout)
             raise
 
-        print('SSH key copied from S3')
+        print('Restrict permissions on SSH key')
+        os.chmod(self.pemkey_filename, 0o400)
+
+        print('Done')
         print('NOTE: user on the remote machine is: ubuntu')
 
-    def launch_instance(
+    def get_compatible_instance(
+            self,
+            ):
+        try:
+            out = sp.run(' '.join([
+                'aws', 'ec2', 'describe-instances',
+                '--filters', '"Name=image-id,Values={:}"'.format(AMI_ID),
+                ]),
+                shell=True,
+                check=True,
+                stdout=sp.PIPE).stdout
+        except sp.CalledProcessError as e:
+            print(e.stdout)
+            raise
+
+        outd = json.loads(out.decode())
+        if 'Reservations' not in outd:
+            return None
+
+        for res in outd['Reservations']:
+            if 'Instances' not in res:
+                continue
+
+            for instance in res['Instances']:
+                instance_id = instance['InstanceId']
+                state = instance['State']['Name']
+                if state in ('stopped',):
+                    self.instance_id = instance_id
+                    return instance_id
+
+        return None
+
+    def get_remote_cmd(
             self,
             input_data_path,
             input_samplesheet_path,
@@ -67,7 +102,113 @@ class Runner:
             output_gdrive_path,
             dataset_id,
             ):
+        remote_cmd = ' '.join([
+            '/home/ubuntu/anaconda/bin/python',
+            '/usr/local/bin/pipeline',
+            '--input-data', input_data_path,
+            '--input-samplesheet', input_samplesheet_path,
+            '--output', output_path,
+            '--output-gdrive', output_gdrive_path,
+            '--id', dataset_id,
+            ])
+        return remote_cmd
 
+    def get_public_ip(self):
+        try:
+            out = sp.run(' '.join([
+                'aws', 'ec2', 'describe-instances',
+                '--instance-ids', self.instance_id,
+                '--query', '"Reservations[*].Instances[*].PublicIpAddress"',
+                '--output=text',
+                ]),
+                shell=True,
+                check=True,
+                stdout=sp.PIPE,
+                ).stdout
+        except sp.CalledProcessError as e:
+            print(e.stdout)
+            raise
+
+        public_ip = out.decode().rstrip('\n')
+        return public_ip
+
+    def start_pipeline(
+            self,
+            input_data_path,
+            input_samplesheet_path,
+            output_path,
+            output_gdrive_path,
+            dataset_id,
+            ):
+        remote_cmd = self.get_remote_cmd(
+                input_data_path=input_data_path,
+                input_samplesheet_path=input_samplesheet_path,
+                output_path=output_path,
+                output_gdrive_path=output_gdrive_path,
+                dataset_id=dataset_id,
+                )
+
+        public_ip = self.get_public_ip()
+
+        try:
+            call = ' '.join([
+                'ssh',
+                '-o', 'IdentitiesOnly=yes',
+                '-o', '"StrictHostKeyChecking no"',
+                '-i', self.pemkey_filename,
+                'ubuntu@{:}'.format(public_ip),
+                "'{:}'".format(remote_cmd),
+                ])
+            print(call)
+            sp.run(
+                call,
+                shell=True,
+                check=True,
+                )
+        except sp.CalledProcessError as e:
+            self.stop_instance()
+            print(e.stdout)
+            raise
+
+    def start_instance(
+            self,
+            dataset_id,
+            ):
+
+        if not hasattr(self, 'pemkey'):
+            self.get_pem_key()
+
+        try:
+            out = sp.run(' '.join([
+                'aws', 'ec2', 'create-tags',
+                '--resources', self.instance_id,
+                '--tags', "Key=datasetId,Value={:}".format(dataset_id),
+                ]),
+                shell=True,
+                check=True,
+                stdout=sp.PIPE).stdout
+        except sp.CalledProcessError as e:
+            print(e.stdout)
+            raise
+
+        try:
+            out = sp.run(' '.join([
+                'aws', 'ec2', 'start-instances',
+                '--instance-ids', self.instance_id,
+                ]),
+                shell=True,
+                check=True,
+                stdout=sp.PIPE).stdout
+        except sp.CalledProcessError as e:
+            print(e.stdout)
+            raise
+
+        print('Started existing EC2 instance id: {:}'.format(instance_id))
+
+    def launch_instance(
+            self,
+            dataset_id,
+            ):
         if not hasattr(self, 'pemkey'):
             self.get_pem_key()
 
@@ -76,26 +217,18 @@ class Runner:
             '{Key=Project,Value=viscRNA-Seq}',
             '{{Key=datasetId,Value={:}}}'.format(dataset_id),
             ])
-        remote_cmd = ' '.join([
-            '/usr/local/bin/pipeline',
-            '--input-data', input_data_path,
-            '--input-samplesheet', input_samplesheet_path,
-            '--output', output_path,
-            '--output-gdrive', output_gdrive_path,
-            '--id', dataset_id,
-            ])
+
         try:
             out = sp.run(' '.join([
                 'aws', 'ec2', 'run-instances',
                 '--image-id', AMI_ID,
                 '--count', '1',
-                '--instance-type', 't2.micro',
+                '--instance-type', 'm4.2xlarge',
                 '--instance-initiated-shutdown-behavior', 'terminate',
                 '--tag-specifications',
                 '"ResourceType=instance,Tags=[{:}]"'.format(tags),
                 '"ResourceType=volume,Tags=[{:}]"'.format(tags),
                 '--key-name', self.pemkey,
-                #'--user-data', '"'+remote_cmd+'"',
                 ]),
                 shell=True,
                 check=True,
@@ -111,19 +244,20 @@ class Runner:
         instance_state = outd['Instances'][0]['State']['Name']
 
         self.instance_id = instance_id
-        print('EC2 instance id: {:}, {:}'.format(instance_id, instance_state))
+        print('Launched EC2 instance id: {:}, {:}'.format(instance_id, instance_state))
         return instance_id
 
-    def monitor_pipeline(self, timeout=40):
-        console_output_buffer = []
-
+    def wait_for_state(self, state, timeout=1000000):
+        timeout = max(timeout, 0.05)
         t0 = time.time()
-        t = time.time()
-        while ((t - t0) // 60) < timeout:
+        t = t0
+        while ((t - t0) / 60) <= timeout:
             try:
                 out = sp.run(' '.join([
                     'aws', 'ec2', 'describe-instances',
                     '--instance-ids', self.instance_id,
+                    '--query', '"Reservations[*].Instances[*].State.Name"',
+                    '--output=text',
                     ]),
                     check=True,
                     shell=True,
@@ -131,26 +265,50 @@ class Runner:
             except sp.CalledProcessError as e:
                 if e.stdout is not None:
                     print(e.stdout.decode())
-                self.terminate_instance(self.instance_id)
                 raise
 
-            if out is None:
-                self.terminate_instance(self.instance_id)
-                raise ValueError('Output of describe-images is None')
+            instance_state = out.decode().rstrip('\n')
+            if instance_state == state:
+                return instance_state
 
-            outd = json.loads(out.decode())
-
-            if ('Instances' not in outd) or (len(outd['Instances']) == 0):
-                self.terminate_instance(self.instance_id)
-                raise ValueError('No instances launched!')
-
-            instance_state = outd['Instances'][0]['State']['Name']
-            print('Job state: {:}'.format(instance_state))
-
-            if instance_state != 'running':
-                time.sleep(30)
+            if timeout >= 1:
+                time.sleep(10)
                 t = time.time()
                 continue
+            else:
+                return instance_state
+
+    def monitor_pipeline(self, timeout=40):
+        console_output_buffer = []
+
+        timeout = max(timeout, 0.05)
+        t0 = time.time()
+        t = t0
+        while ((t - t0) / 60) <= timeout:
+            try:
+                out = sp.run(' '.join([
+                    'aws', 'ec2', 'describe-instances',
+                    '--instance-ids', self.instance_id,
+                    '--query', '"Reservations[*].Instances[*].State.Name"',
+                    '--output=text',
+                    ]),
+                    check=True,
+                    shell=True,
+                    stdout=sp.PIPE).stdout
+            except sp.CalledProcessError as e:
+                if e.stdout is not None:
+                    print(e.stdout.decode())
+                raise
+
+            instance_state = out.decode().rstrip('\n')
+            if instance_state != 'running':
+                print('Job state: {:}'.format(instance_state))
+                if timeout >= 1:
+                    time.sleep(10)
+                    t = time.time()
+                    continue
+                else:
+                    break
 
             # Print console output
             try:
@@ -164,11 +322,9 @@ class Runner:
             except sp.CalledProcessError as e:
                 if e.stdout is not None:
                     print(e.stdout.decode())
-                self.terminate_instance(self.instance_id)
                 raise
 
             if out is None:
-                self.terminate_instance(self.instance_id)
                 raise ValueError('Output of get-console-output is None')
 
             lines = json.loads(out.decode())['Output'].split('\n')
@@ -191,14 +347,27 @@ class Runner:
                 if len(console_output_buffer) > 50_000:
                     console_output_buffer = console_output_buffer[-50_000:]
 
-            time.sleep(30)
-            t = time.time()
+            if timeout >= 1:
+                time.sleep(10)
+                t = time.time()
+            else:
+                break
 
-    def terminate_instance(self, instance_id):
+    def stop_instance(self):
+        sp.run(' '.join([
+            'aws', 'ec2',
+            'stop-instances',
+            '--instance-ids', self.instance_id,
+            ]),
+            shell=True,
+            check=True,
+        )
+
+    def terminate_instance(self):
         sp.run(' '.join([
             'aws', 'ec2',
             'terminate-instances',
-            '--instance-ids', instance_id,
+            '--instance-ids', self.instance_id,
             ]),
             shell=True,
             check=True,
@@ -229,7 +398,7 @@ if __name__ == '__main__':
             help='Sets a unique ID for the dataset, for record keeping')
     par.add_argument(
             '--monitor', type=int, default=None,
-            help='Monitoring the pipeline after launch for X minutes (0 means forever)')
+            help='Monitoring the pipeline after launch for X minutes (0 means once)')
 
     pam = spas.add_parser('monitor')
     pam.add_argument(
@@ -237,7 +406,7 @@ if __name__ == '__main__':
             help='The id of the EC2 instance')
     pam.add_argument(
             '--timeout', type=int, default=0,
-            help='Monitoring the pipeline after launch for X minutes (0 means forever)')
+            help='Monitoring the pipeline after launch for X minutes (0 means once)')
 
     pas = spas.add_parser('terminate')
     pas.add_argument(
@@ -250,16 +419,32 @@ if __name__ == '__main__':
     run.broadcast_identity()
 
     if args.subparser_name == 'run':
-        instance_id = run.launch_instance(
+        instance_id = run.get_compatible_instance()
+        if instance_id is None:
+            instance_id = run.launch_instance(
+                    dataset_id=args.id,
+                    )
+        else:
+            run.start_instance(
+                    dataset_id=args.id,
+                    )
+
+        print('Waiting for instance to come online')
+        run.wait_for_state('running', timeout=3)
+
+        print('Start pipeline')
+        run.start_pipeline(
                 input_data_path=args.input_data,
                 input_samplesheet_path=args.input_samplesheet,
                 output_path=args.output,
                 output_gdrive_path=args.output_gdrive,
                 dataset_id=args.id,
-                )
+            )
 
         if args.monitor is not None:
+            print('Sleeping 1 minute before monitoring')
             time.sleep(60)
+            print('Start monitoring')
             run.monitor_pipeline(timeout=args.monitor)
 
     elif args.subparser_name == 'monitor':
@@ -267,7 +452,8 @@ if __name__ == '__main__':
         run.monitor_pipeline(timeout=args.timeout)
 
     elif args.subparser_name == 'terminate':
-        run.terminate_instance(args.instance_id)
+        run.instance_id = args.instance_id
+        run.terminate_instance()
 
     else:
         raise ValueError('Subcommand not found: {:}'.format(args.subparser_name))
