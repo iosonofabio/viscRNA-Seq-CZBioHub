@@ -19,7 +19,14 @@ before_install:
   # Load all branches for AMI recycling
   - git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*" 1>/dev/null
   - git fetch origin -q
+  - source compatible_ami_bash
 
+stages:
+  - name: build_dry_image
+    if: env(AMI_ID) IS present
+  - name: build_image
+    if: env(AMI_ID) IS present
+  - name: test_image
 
 jobs:
   include:
