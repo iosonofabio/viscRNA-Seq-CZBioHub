@@ -7,7 +7,7 @@
     "aws_security_group_id": "",
     "aws_region": "us-west-2",
     "aws_instance_type": "t2.micro",
-    "aws_source_ami": "ami-1b62b863",
+    "aws_source_ami": "ami-eb01b193",
     "aws_virtualization_type": "pv",
     "travis_branch": "{{env `TRAVIS_BRANCH`}}",
     "travis_commit": "{{env `TRAVIS_COMMIT`}}",

@@ -15,12 +15,6 @@ conda config --set always_yes yes --set changeps1 no
 echo "Update conda"
 conda update -q conda
 
-echo "Install cellranger"
-aws s3 cp --quiet s3://viscrna-seq/assets/software/cellranger/cellranger-2.1.0.tar.gz /tmp/cellranger.tar.gz
-tar -xf /tmp/cellranger.tar.gz -C /tmp
-sudo mv /tmp/cellranger-2.1.0/* /usr/local/bin/
-cellranger sitecheck
-
 echo "Make /assets folder"
 sudo mkdir /assets
 sudo chmod -R a+rwX /assets
