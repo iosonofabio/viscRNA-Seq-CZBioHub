@@ -1,5 +1,0 @@
-AMI_ID=$(./compatible_ami)
-retcode=$?
-if [ $retcode == 0 ]; then
-  export AMI_ID
-fi
