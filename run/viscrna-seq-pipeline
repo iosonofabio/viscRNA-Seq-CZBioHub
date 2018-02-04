@@ -44,7 +44,7 @@ class Runner:
         self.pemkey_filename = 'key.pem'
 
         # Copy pem key to S3, else how are we to check what's going on?
-        src = 's3://viscrna-seq/assets/credentials/instance-keys/key.pem'
+        src = 's3://viscrna-seq/assets/credentials/instance-keys/mCMV_10X.pem'
         try:
             sp.run(' '.join([
                 'aws', 's3', 'cp',
