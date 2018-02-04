@@ -20,6 +20,7 @@ sudo mkdir -p /data
 sudo chmod a+rwX /data
 sudo rm -rf /usr/local/bin/pipeline
 sudo mv /tmp/pipeline /usr/local/bin/
+sudo chmod a+x /usr/local/bin/pipeline
 
 echo "DONE"
 exit 0
