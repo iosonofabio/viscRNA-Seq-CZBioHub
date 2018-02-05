@@ -6,6 +6,7 @@ This script runs on the newly allocated EC2 instance as directed by the viscrna-
 '''
 import os
 import sys
+import shutil
 import subprocess as sp
 import argparse
 
@@ -26,7 +27,11 @@ class Pipeline:
         self.output_gdrive_path = output_gdrive_path
         self.dataset_id = dataset_id
 
+    def remove_old_data(self):
+        shutil.rmtree('/data/{:}'.format(self.dataset_id), ignore_errors=True)
+
     def get_data(self, path):
+        os.makedirs('/data/{:}/bcl'.format(self.dataset_id), exist_ok=True)
         if path.startswith('s3://'):
             return self.get_data_s3(path)
         elif path.startswith('http://') or path.startswith('https://'):
@@ -35,10 +40,8 @@ class Pipeline:
             raise ValueError('Type of data source not recognized: {:}'.format(path))
 
     def unpack_data(self, path):
-        parent = os.path.dirname(path)
-        if parent == '':
-            parent = '.'
-        fn = os.path.basename(path)
+        parent = '/data/{:}/bcl'.format(self.dataset_id)
+        fn = '/data/{:}/bcl/{:}'.format(self.dataset_id, os.path.basename(path))
 
         if fn.endswith('.tar.gz') or fn.endswith('.tar.xz'):
             sp.run(' '.join([
@@ -53,7 +56,7 @@ class Pipeline:
         os.remove(path)
 
     def get_data_s3(self, url):
-        fn = url.split('/')[-1]
+        fn = '/data/{:}/bcl/{:}'.format(self.dataset_id, url.split('/')[-1])
         sp.run(' '.join([
             'aws', 's3', 'cp',
             url, fn,
@@ -63,15 +66,22 @@ class Pipeline:
             )
 
     def get_data_url(self, url):
-        sp.run(' '.join([
-            'wget', url,
-            ]),
-            shell=True,
-            check=True,
-            )
+        os.chdir('/data/{:}/bcl').format(self.dataset_id)
+        try:
+            sp.run(' '.join([
+                'wget', url,
+                ]),
+                shell=True,
+                check=True,
+                )
+        finally:
+            os.chdir('/home/ubuntu')
 
     def __call__(self):
         print('RUN PIPELINE')
+        print('Remove old data')
+        self.remove_old_data()
+
         print('Get data')
         self.get_data(self.input_data_path)
         self.input_data_path = os.path.basename(self.input_data_path)
@@ -92,7 +102,7 @@ class Pipeline:
             '--id={:}'.format(self.dataset_id),
             '--run={:}'.format(self.input_data_path),
             '--samplesheet={:}'.format(self.input_samplesheet_path),
-            '--output-dir=/data/fastq'.format(self.dataset_id),
+            '--output-dir=/data/{:}/fastq'.format(self.dataset_id),
             ]),
             shell=True,
             check=True)
@@ -100,10 +110,10 @@ class Pipeline:
         print('Count genes')
         sp.run(' '.join([
             'cellranger',
-            'count'
+            'count',
             '--id='+self.dataset_id,
             '--transcriptome=/assets/references/mouse_and_mCMV',
-            '--fastqs=/data/fastq',
+            '--fastqs=/data/{:}/fastq'.format(self.dataset_id),
             '--sample='+self.dataset_id,
             '--expect-cells=5000',
             ]),
@@ -117,8 +127,7 @@ class Pipeline:
         print('Transfer output to S3')
         sp.run(' '.join([
             'aws', 's3', 'cp',
-            '{:}/{:}'.format(
-                os.getenv('HOME'),
+            '/data/{:}/fastq'.format(
                 self.dataset_id),
             's3://viscrna-seq/data/{:}/'.format(
                 self.dataset_id),
@@ -128,6 +137,7 @@ class Pipeline:
             shell=True)
 
         print('Transfer count table to GDrive')
+        print('TODO')
         # TODO
 
         print('Done')
