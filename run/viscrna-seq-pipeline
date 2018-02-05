@@ -23,7 +23,7 @@ import argparse
 import subprocess as sp
 
 
-AMI_ID = ''
+AMI_ID = 'ami-be52d7c6'
 GIT_BRANCH = ''
 GIT_COMMIT = ''
 
@@ -101,6 +101,9 @@ class Runner:
             output_path,
             output_gdrive_path,
             dataset_id,
+            samplenames,
+            chemistry,
+            expect_cells,
             ):
         remote_cmd = ' '.join([
             '/home/ubuntu/anaconda/bin/python',
@@ -110,6 +113,9 @@ class Runner:
             '--output', output_path,
             '--output-gdrive', output_gdrive_path,
             '--id', dataset_id,
+            '--samplenames'] + samplenames + [
+            '--chemistry', chemistry,
+            '--expect-cells', expect_cells,
             ])
         return remote_cmd
 
@@ -139,6 +145,9 @@ class Runner:
             output_path,
             output_gdrive_path,
             dataset_id,
+            samplenames,
+            chemistry,
+            expect_cells,
             ):
         remote_cmd = self.get_remote_cmd(
                 input_data_path=input_data_path,
@@ -146,6 +155,9 @@ class Runner:
                 output_path=output_path,
                 output_gdrive_path=output_gdrive_path,
                 dataset_id=dataset_id,
+                samplenames=samplenames,
+                chemistry=chemistry,
+                expect_cells=expect_cells,
                 )
 
         public_ip = self.get_public_ip()
@@ -396,6 +408,20 @@ if __name__ == '__main__':
     par.add_argument(
             '--id', required=True,
             help='Sets a unique ID for the dataset, for record keeping')
+    pa.add_argument(
+            '--samplenames', nargs='+', required=True,
+            help='Samplenames in the samplesheet')
+    par.add_argument(
+            '--chemistry', required=False, default='threeprime',
+            choices=[
+                'auto', 'threeprime', 'fiveprime',
+                'SC3Pv1', 'SC3Pv2', 'SC5P-PE', 'SC5P-R2',
+                ],
+            help='Chemistry used in the data, see https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/using/count')
+    par.add_argument(
+            '--expect-cells', required=False, default=3000,
+            help='Number of expected cells in the library')
+
     par.add_argument(
             '--monitor', type=int, default=None,
             help='Monitoring the pipeline after launch for X minutes (0 means once)')
@@ -432,6 +458,8 @@ if __name__ == '__main__':
         print('Waiting for instance to come online')
         run.wait_for_state('running', timeout=3)
 
+        sys.exit()
+
         print('Start pipeline')
         run.start_pipeline(
                 input_data_path=args.input_data,
@@ -439,6 +467,9 @@ if __name__ == '__main__':
                 output_path=args.output,
                 output_gdrive_path=args.output_gdrive,
                 dataset_id=args.id,
+                samplenames=args.samplenames,
+                chemistry=args.chemistry,
+                expect_cells=args.expect_cells,
             )
 
         if args.monitor is not None:

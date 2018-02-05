@@ -19,6 +19,9 @@ class Pipeline:
             output_path,
             output_gdrive_path,
             dataset_id,
+            samplenames,
+            chemistry,
+            expect_cells,
             ):
 
         self.input_data_path = input_data_path
@@ -26,12 +29,21 @@ class Pipeline:
         self.output_path = output_path
         self.output_gdrive_path = output_gdrive_path
         self.dataset_id = dataset_id
+        self.samplenames = samplenames
+        self.chemistry = chemistry
+        self.expect_cells = expect_cells
 
     def remove_old_data(self):
         shutil.rmtree('/data/{:}'.format(self.dataset_id), ignore_errors=True)
+        shutil.rmtree('/home/ubuntu/{:}'.format(self.dataset_id), ignore_errors=True)
+        shutil.rmtree('/home/ubuntu/__{:}.mro'.format(self.dataset_id), ignore_errors=True)
+
+    def make_data_folders(self):
+        os.makedirs('/data/{:}'.format(self.dataset_id), exist_ok=True)
+        os.makedirs('/data/{:}/bcl'.format(self.dataset_id), exist_ok=True)
+        os.makedirs('/data/{:}/log'.format(self.dataset_id), exist_ok=True)
 
     def get_data(self, path):
-        os.makedirs('/data/{:}/bcl'.format(self.dataset_id), exist_ok=True)
         if path.startswith('s3://'):
             return self.get_data_s3(path)
         elif path.startswith('http://') or path.startswith('https://'):
@@ -66,7 +78,7 @@ class Pipeline:
             )
 
     def get_data_url(self, url):
-        os.chdir('/data/{:}/bcl').format(self.dataset_id)
+        os.chdir('/data/{:}/bcl'.format(self.dataset_id))
         try:
             sp.run(' '.join([
                 'wget', url,
@@ -82,9 +94,14 @@ class Pipeline:
         print('Remove old data')
         self.remove_old_data()
 
+        print('Make data folders')
+        self.make_data_folders()
+
         print('Get data')
         self.get_data(self.input_data_path)
-        self.input_data_path = os.path.basename(self.input_data_path)
+        self.input_data_path = '/data/{:}/bcl/{:}'.format(
+                self.dataset_id,
+                os.path.basename(self.input_data_path))
 
         print('Unpack data')
         self.unpack_data(self.input_data_path)
@@ -92,7 +109,9 @@ class Pipeline:
 
         print('Get samplesheet')
         self.get_data(self.input_samplesheet_path)
-        self.input_samplesheet_path = os.path.basename(self.input_samplesheet_path)
+        self.input_samplesheet_path = '/data/{:}/bcl/{:}'.format(
+                self.dataset_id,
+                os.path.basename(self.input_samplesheet_path))
 
         print('Make fastq')
         os.makedirs('/data/fastq', exist_ok=True)
@@ -106,39 +125,51 @@ class Pipeline:
             ]),
             shell=True,
             check=True)
+        shutil.copytree(
+                self.dataset_id,
+                '/data/{:}/log/mkfastq'.format(self.dataset_id),
+                )
+        shutil.rmtree(
+                self.dataset_id,
+                ignore_errors=True)
 
-        print('Count genes')
-        sp.run(' '.join([
-            'cellranger',
-            'count',
-            '--id='+self.dataset_id,
-            '--transcriptome=/assets/references/mouse_and_mCMV',
-            '--fastqs=/data/{:}/fastq'.format(self.dataset_id),
-            '--sample='+self.dataset_id,
-            '--expect-cells=5000',
-            ]),
-            shell=True,
-            check=True)
-        # NOTE: output goes in a subfolder of the cwd called like the sample:
-        # $HOME/<self.dataset_id>/outs/possorted_genome_bam.bam
-        # $HOME/<self.dataset_id>/outs/filtered_gene_bc_matrices_h5.h5
-        # see: https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/output/overview
+        for samplename in self.samplenames:
+            print('Count genes for sample: {:}'.format(samplename))
+            sp.run(' '.join([
+                'cellranger',
+                'count',
+                '--id='+self.dataset_id,
+                '--transcriptome=/assets/references/mouse_and_mCMV',
+                '--fastqs=/data/{:}/fastq'.format(self.dataset_id),
+                '--sample={:}'.format(samplename),
+                '--expect-cells={:}'.format(self.expect_cells),
+                '--chemistry={:}'.format(self.chemistry),
+                '--nosecondary',
+                ]),
+                shell=True,
+                check=True)
+            # NOTE: output goes in a subfolder of the cwd called like the sample:
+            # $HOME/<self.dataset_id>/outs/possorted_genome_bam.bam
+            # $HOME/<self.dataset_id>/outs/filtered_gene_bc_matrices_h5.h5
+            # see: https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/output/overview
 
-        print('Transfer output to S3')
-        sp.run(' '.join([
-            'aws', 's3', 'cp',
-            '/data/{:}/fastq'.format(
-                self.dataset_id),
-            's3://viscrna-seq/data/{:}/'.format(
-                self.dataset_id),
-            '--recursive',
-            ]),
-            check=True,
-            shell=True)
+            print('Transfer output to S3')
+            sp.run(' '.join([
+                'aws', 's3', 'cp',
+                #FIXME FIXME
+                '/data/{:}/fastq'.format(
+                    self.dataset_id),
+                's3://viscrna-seq/data/{:}/{:}'.format(
+                    self.dataset_id,
+                    samplename),
+                '--recursive',
+                ]),
+                check=True,
+                shell=True)
 
-        print('Transfer count table to GDrive')
-        print('TODO')
-        # TODO
+            print('Transfer count table to GDrive')
+            print('TODO')
+            # TODO
 
         print('Done')
 
@@ -162,6 +193,19 @@ if __name__ == '__main__':
     pa.add_argument(
             '--id', required=True,
             help='Sets a unique ID for the dataset, for record keeping')
+    pa.add_argument(
+            '--samplenames', nargs='+', required=True,
+            help='Samplenames in the samplesheet')
+    pa.add_argument(
+            '--chemistry', required=False, default='threeprime',
+            choices=[
+                'auto', 'threeprime', 'fiveprime',
+                'SC3Pv1', 'SC3Pv2', 'SC5P-PE', 'SC5P-R2',
+                ],
+            help='Chemistry used in the data, see https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/using/count')
+    pa.add_argument(
+            '--expect-cells', required=False, default=3000,
+            help='Number of expected cells in the library')
 
     args = pa.parse_args()
 
@@ -172,6 +216,9 @@ if __name__ == '__main__':
             output_path=args.output,
             output_gdrive_path=args.output_gdrive,
             dataset_id=args.id,
+            samplenames=args.samplenames,
+            chemistry=args.chemistry,
+            expect_cells=args.expect_cells,
             )
 
     print('Run the pipeline')
