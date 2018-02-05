@@ -171,6 +171,7 @@ class Builder:
                 raise RuntimeError('packer build failed for unknown reasons, see log')
             ami_id = out[i+3].split(',')[5].split(':')[1]
             print('AMI built: {:}'.format(ami_id))
+            return ami_id
 
         except RuntimeError:
             print('Ensuring detachment of EBS volume')

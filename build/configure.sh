@@ -22,11 +22,25 @@ echo "Combined transcriptome hashes"
 vir="NC_004065_1.gb"
 tra="refdata-cellranger-mm10-1.2.0"
 
-echo "Make folders"
+echo "Make virus folder"
 mkdir -p /assets/references/virus_genome
 mv /tmp/$vir /assets/references/virus_genome/$vir
 
 # NOTE: rehashing is very expensive, so we cache it on S3
+#echo "Make mouse folder"
+#mkdir -p /assets/references/mouse/transcriptome
+#
+#echo "wget mouse reference transcriptome"
+#cd /assets/references/mouse/transcriptome
+#wget -nv http://cf.10xgenomics.com/supp/cell-exp/$tra.tar.gz
+#
+#echo "Extract mouse reference transcriptome"
+#tar -xf $mouse.tar.gz
+#
+#echo "Remove tar.gz and star files"
+#rm -rf $mouse.tar.gz
+#rm -rf $mouse/star
+#
 #echo "Make combined hashes"
 #/tmp/append_virus_to_transcriptome --virus-gb /assets/references/virus_genome/$vir --genome-fasta /assets/references/mouse/transcriptome/$tra/fasta/genome.fa --transcriptome-gtf /assets/references/mouse/transcriptome/$tra/genes/genes.gtf --output /assets/references/combined/transcriptome
 #
