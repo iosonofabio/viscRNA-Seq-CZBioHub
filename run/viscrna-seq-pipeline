@@ -23,7 +23,7 @@ import argparse
 import subprocess as sp
 
 
-AMI_ID = 'ami-1bd75263'
+AMI_ID = ''
 GIT_BRANCH = ''
 GIT_COMMIT = ''
 
