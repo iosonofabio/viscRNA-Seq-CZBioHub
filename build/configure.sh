@@ -48,12 +48,14 @@ echo "Remove original transcriptomes"
 rm -rf /assets/references/{mouse,human}
 
 echo "Copy combined transcriptome from S3"
-aws s3 cp s3://viscrna-seq/assets/references/reference_mouse_and_mCMV.tar.gz /assets/references/
+#aws s3 cp s3://viscrna-seq/assets/references/reference_mouse_and_mCMV_separate.tar.gz /assets/references/
+aws s3 cp s3://viscrna-seq/assets/references/reference_mouse_and_mCMV_combined.tar.gz /assets/references/
 echo "Extracting combined transcriptome"
-mv /assets/references/reference_mouse_and_mCMV.tar.gz /assets/references/mouse_and_mCMV.tar.gz
+#mv /assets/references/reference_mouse_and_mCMV_separate.tar.gz /assets/references/mouse_and_mCMV.tar.gz
+mv /assets/references/reference_mouse_and_mCMV_combined.tar.gz /assets/references/mouse_and_mCMV.tar.gz
 tar -xf /assets/references/mouse_and_mCMV.tar.gz -C /assets/references/
 echo "Removing tar.gz"
-rm -rf /assets/reference/mouse_and_mCMV.tar.gz
+rm -rf /assets/references/mouse_and_mCMV.tar.gz
 echo "Combined transcriptome hashed"
 
 echo "DONE"
