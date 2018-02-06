@@ -408,7 +408,7 @@ if __name__ == '__main__':
     par.add_argument(
             '--id', required=True,
             help='Sets a unique ID for the dataset, for record keeping')
-    pa.add_argument(
+    par.add_argument(
             '--samplenames', nargs='+', required=True,
             help='Samplenames in the samplesheet')
     par.add_argument(
