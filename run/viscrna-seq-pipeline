@@ -23,7 +23,7 @@ import argparse
 import subprocess as sp
 
 
-AMI_ID = 'ami-be52d7c6'
+AMI_ID = 'ami-308c0848'
 GIT_BRANCH = ''
 GIT_COMMIT = ''
 
@@ -115,7 +115,7 @@ class Runner:
             '--id', dataset_id,
             '--samplenames'] + samplenames + [
             '--chemistry', chemistry,
-            '--expect-cells', expect_cells,
+            '--expect-cells', str(expect_cells),
             ])
         return remote_cmd
 
@@ -161,6 +161,8 @@ class Runner:
                 )
 
         public_ip = self.get_public_ip()
+
+        # TODO: ssh -n -f user@host "sh -c 'cd /whereever; nohup ./whatever > /dev/null 2>&1 &'"
 
         try:
             call = ' '.join([
@@ -241,6 +243,7 @@ class Runner:
                 '"ResourceType=instance,Tags=[{:}]"'.format(tags),
                 '"ResourceType=volume,Tags=[{:}]"'.format(tags),
                 '--key-name', self.pemkey,
+                '--iam-instance-profile', 'Name="S3fromEC2"',
                 ]),
                 shell=True,
                 check=True,
@@ -455,10 +458,8 @@ if __name__ == '__main__':
                     dataset_id=args.id,
                     )
 
-        print('Waiting for instance to come online')
-        run.wait_for_state('running', timeout=3)
-
-        sys.exit()
+        print('Waiting for instance: 300s')
+        run.wait_for_state('running', timeout=5)
 
         print('Start pipeline')
         run.start_pipeline(

@@ -42,6 +42,7 @@ class Pipeline:
         os.makedirs('/data/{:}'.format(self.dataset_id), exist_ok=True)
         os.makedirs('/data/{:}/bcl'.format(self.dataset_id), exist_ok=True)
         os.makedirs('/data/{:}/log'.format(self.dataset_id), exist_ok=True)
+        os.makedirs('/data/{:}/count'.format(self.dataset_id), exist_ok=True)
 
     def get_data(self, path):
         if path.startswith('s3://'):
@@ -89,6 +90,55 @@ class Pipeline:
         finally:
             os.chdir('/home/ubuntu')
 
+    def copy_output_data_mkfastq(self):
+        print('Transfer fastqs')
+        sp.run(' '.join([
+            'aws', 's3', 'cp',
+            '--recursive',
+            '/data/{:}/fastq'.format(self.dataset_id),
+            's3://viscrna-seq/data/{:}/fastq'.format(self.dataset_id)
+            ]),
+            shell=True,
+            check=True)
+
+        print('Transfer mkfastq logs')
+        sp.run(' '.join([
+            'aws', 's3', 'cp',
+            '--recursive',
+            '/data/{:}/log/mkfastq'.format(self.dataset_id),
+            's3://viscrna-seq/data/{:}/log/mkfastq'.format(self.dataset_id)
+            ]),
+            shell=True,
+            check=True)
+
+    def copy_output_data_count(self, samplename):
+        print('Transfer count tables')
+        sp.run(' '.join([
+            'aws', 's3', 'cp',
+            '--recursive',
+            '/data/{:}/count/{:}'.format(self.dataset_id, samplename),
+            's3://viscrna-seq/data/{:}/count/{:}'.format(
+                self.dataset_id,
+                samplename)
+            ]),
+            shell=True,
+            check=True)
+
+        print('Transfer count logs')
+        sp.run(' '.join([
+            'aws', 's3', 'cp',
+            '--recursive',
+            '/data/{:}/log/count/{:}'.format(self.dataset_id, samplename),
+            's3://viscrna-seq/data/{:}/log/count/{:}'.format(
+                self.dataset_id, samplename)
+            ]),
+            shell=True,
+            check=True)
+
+        print('Transfer count table to GDrive')
+        print('TODO')
+        # TODO
+
     def __call__(self):
         print('RUN PIPELINE')
         print('Remove old data')
@@ -132,6 +182,7 @@ class Pipeline:
         shutil.rmtree(
                 self.dataset_id,
                 ignore_errors=True)
+        self.copy_output_data_mkfastq()
 
         for samplename in self.samplenames:
             print('Count genes for sample: {:}'.format(samplename))
@@ -152,24 +203,24 @@ class Pipeline:
             # $HOME/<self.dataset_id>/outs/possorted_genome_bam.bam
             # $HOME/<self.dataset_id>/outs/filtered_gene_bc_matrices_h5.h5
             # see: https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/output/overview
-
-            print('Transfer output to S3')
-            sp.run(' '.join([
-                'aws', 's3', 'cp',
-                #FIXME FIXME
-                '/data/{:}/fastq'.format(
-                    self.dataset_id),
-                's3://viscrna-seq/data/{:}/{:}'.format(
+            shutil.copytree(
+                    self.dataset_id+'/outs',
+                    '/data/{:}/count/{:}'.format(
+                        self.dataset_id,
+                        samplename))
+            shutil.rmtree(
+                    self.dataset_id+'/outs',
+                    ignore_errors=True)
+            shutil.copytree(
                     self.dataset_id,
-                    samplename),
-                '--recursive',
-                ]),
-                check=True,
-                shell=True)
+                    '/data/{:}/log/count/{:}'.format(
+                        self.dataset_id,
+                        samplename))
+            shutil.rmtree(
+                    self.dataset_id,
+                    ignore_errors=True)
+            self.copy_output_data_counts(samplename)
 
-            print('Transfer count table to GDrive')
-            print('TODO')
-            # TODO
 
         print('Done')
 
