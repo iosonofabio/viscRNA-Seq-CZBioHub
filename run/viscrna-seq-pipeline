@@ -424,6 +424,9 @@ if __name__ == '__main__':
     par.add_argument(
             '--expect-cells', required=False, default=3000,
             help='Number of expected cells in the library')
+    par.add_argument(
+            '--instance-id', required=False,
+            help='Specify a running EC2 instance to use')
 
     par.add_argument(
             '--monitor', type=int, default=None,
@@ -448,18 +451,25 @@ if __name__ == '__main__':
     run.broadcast_identity()
 
     if args.subparser_name == 'run':
-        instance_id = run.get_compatible_instance()
-        if instance_id is None:
-            instance_id = run.launch_instance(
-                    dataset_id=args.id,
-                    )
-        else:
-            run.start_instance(
-                    dataset_id=args.id,
-                    )
+        if args.instance_id:
+            instance_id = args.instance_id
+            run.instance_id = instance_id
+            run.get_pem_key()
 
-        print('Waiting for instance: 300s')
-        run.wait_for_state('running', timeout=5)
+        else:
+            instance_id = run.get_compatible_instance()
+            if instance_id is None:
+                instance_id = run.launch_instance(
+                        dataset_id=args.id,
+                        )
+            else:
+                run.start_instance(
+                        dataset_id=args.id,
+                        )
+
+            print('Waiting for instance: 300s')
+            run.wait_for_state('running', timeout=5)
+            time.sleep(60)
 
         print('Start pipeline')
         run.start_pipeline(

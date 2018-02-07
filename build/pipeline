@@ -90,54 +90,88 @@ class Pipeline:
         finally:
             os.chdir('/home/ubuntu')
 
-    def copy_output_data_mkfastq(self):
-        print('Transfer fastqs')
-        sp.run(' '.join([
-            'aws', 's3', 'cp',
-            '--recursive',
-            '/data/{:}/fastq'.format(self.dataset_id),
-            's3://viscrna-seq/data/{:}/fastq'.format(self.dataset_id)
-            ]),
-            shell=True,
-            check=True)
-
-        print('Transfer mkfastq logs')
-        sp.run(' '.join([
-            'aws', 's3', 'cp',
-            '--recursive',
-            '/data/{:}/log/mkfastq'.format(self.dataset_id),
-            's3://viscrna-seq/data/{:}/log/mkfastq'.format(self.dataset_id)
-            ]),
-            shell=True,
-            check=True)
-
-    def copy_output_data_count(self, samplename):
-        print('Transfer count tables')
-        sp.run(' '.join([
-            'aws', 's3', 'cp',
-            '--recursive',
-            '/data/{:}/count/{:}'.format(self.dataset_id, samplename),
-            's3://viscrna-seq/data/{:}/count/{:}'.format(
+    def move_output_data_mkfastq(self):
+        print('Move mkfastq logs')
+        shutil.copytree(
                 self.dataset_id,
-                samplename)
-            ]),
-            shell=True,
-            check=True)
+                '/data/{:}/log/mkfastq/'.format(self.dataset_id),
+                )
+        print('Remove local mkfastq logs')
+        shutil.rmtree(
+                self.dataset_id,
+                ignore_errors=True)
 
+    def move_output_data_count(self, samplename):
+        print('Remove temp files')
+        shutil.rmtree(
+                self.dataset_id+'/SC_RNA_COUNTER_CS',
+                ignore_errors=True)
+
+        print('Move count tables')
+        shutil.copytree(
+                self.dataset_id+'/outs',
+                '/data/{:}/count/{:}'.format(self.dataset_id, samplename),
+                )
+        shutil.rmtree(
+                self.dataset_id+'/outs',
+                ignore_errors=True)
+
+        print('Move count logs')
+        shutil.copytree(
+                self.dataset_id,
+                '/data/{:}/log/count/{:}'.format(self.dataset_id, samplename),
+                )
+        shutil.rmtree(
+                self.dataset_id,
+                ignore_errors=True)
+
+    def make_count_dataframe(self, samplename):
+        import scipy.io
+        import pandas as pd
+
+        print('Parse sparse count matrix for sample {:}'.format(samplename))
+        fdn_sparse = '/data/{:}/count/{:}/filtered_gene_bc_matrices/mouse_and_mCMV/'.format(
+                self.dataset_id,
+                samplename,
+                )
+        fn_sparse = fdn_sparse+'matrix.mtx'
+        fn_bc = fdn_sparse+'barcodes.tsv'
+        fn_genes = fdn_sparse+'genes.tsv'
+        fn_df = fdn_sparse+'dataframe.tsv'
+
+        ind = pd.Index(
+                pd.read_csv(fn_genes, sep='\t', header=None).values[:, 0],
+                name='Gene')
+        col = pd.Index(
+                pd.read_csv(fn_bc, sep='\t', squeeze=True, header=None).values,
+                name='Cell')
+
+        data = scipy.io.mmread(fn_sparse).todense()
+
+        print('Save dataframe count matrix for sample {:}'.format(samplename))
+        df = pd.DataFrame(
+                data=data,
+                index=ind,
+                columns=col,
+                )
+        df.to_csv(fn_df, sep='\t', index=True)
+
+    def transfer_output_S3(self):
         print('Transfer count logs')
         sp.run(' '.join([
             'aws', 's3', 'cp',
             '--recursive',
-            '/data/{:}/log/count/{:}'.format(self.dataset_id, samplename),
-            's3://viscrna-seq/data/{:}/log/count/{:}'.format(
-                self.dataset_id, samplename)
+            '/data/{:}'.format(self.dataset_id),
+            's3://viscrna-seq/data/{:}'.format(self.dataset_id)
             ]),
             shell=True,
             check=True)
+        shutil.rmtree(
+                '/data/{:}'.format(self.dataset_id),
+                ignore_errors=True)
 
         print('Transfer count table to GDrive')
         print('TODO')
-        # TODO
 
     def __call__(self):
         print('RUN PIPELINE')
@@ -164,7 +198,6 @@ class Pipeline:
                 os.path.basename(self.input_samplesheet_path))
 
         print('Make fastq')
-        os.makedirs('/data/fastq', exist_ok=True)
         sp.run(' '.join([
             'cellranger',
             'mkfastq',
@@ -175,14 +208,7 @@ class Pipeline:
             ]),
             shell=True,
             check=True)
-        shutil.copytree(
-                self.dataset_id,
-                '/data/{:}/log/mkfastq'.format(self.dataset_id),
-                )
-        shutil.rmtree(
-                self.dataset_id,
-                ignore_errors=True)
-        self.copy_output_data_mkfastq()
+        self.move_output_data_mkfastq()
 
         for samplename in self.samplenames:
             print('Count genes for sample: {:}'.format(samplename))
@@ -203,27 +229,12 @@ class Pipeline:
             # $HOME/<self.dataset_id>/outs/possorted_genome_bam.bam
             # $HOME/<self.dataset_id>/outs/filtered_gene_bc_matrices_h5.h5
             # see: https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/output/overview
-            shutil.copytree(
-                    self.dataset_id+'/outs',
-                    '/data/{:}/count/{:}'.format(
-                        self.dataset_id,
-                        samplename))
-            shutil.rmtree(
-                    self.dataset_id+'/outs',
-                    ignore_errors=True)
-            shutil.copytree(
-                    self.dataset_id,
-                    '/data/{:}/log/count/{:}'.format(
-                        self.dataset_id,
-                        samplename))
-            shutil.rmtree(
-                    self.dataset_id,
-                    ignore_errors=True)
-            self.copy_output_data_counts(samplename)
+            self.move_output_data_count(samplename)
+            self.make_count_dataframe(samplename)
 
-
+        print('Transfer data and logs to S3')
+        self.transfer_output_S3()
         print('Done')
-
 
 
 if __name__ == '__main__':
